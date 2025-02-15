@@ -83,28 +83,36 @@ def Generatemct(df_sec, df_rs, num_id):
 
     return line_all
 
-workpath = r'D:\Users\63427\Desktop\Code\鋼床鈑'
-inputfilename = 'Section.xlsx'
+
+
 
 # %% 讀取輸入
-inputfile = workpath + '\\' + inputfilename
+inputfile = r"D:\Users\63427\Desktop\Code\鋼床鈑\Steeldeckgirder\Section.xlsx"
 df_section = pd.read_excel(inputfile, sheet_name='鋼床鈑', skiprows=[1])
 df_ribs = pd.read_excel(inputfile, sheet_name='加勁鈑')
 
+
 # %% 寫MCT指令
-commandmct = ""
-for run_id in range(len(df_section)):
+# commandmct = ""
+# for run_id in range(len(df_section)):
 
-    commandmct_single = Generatemct(df_section, df_ribs, run_id)
-    if commandmct == "":
-        commandmct = commandmct_single
-    else:
-        commandmct = commandmct +'\n' +commandmct_single
+#     commandmct_single = Generatemct(df_section, df_ribs, run_id)
+#     if commandmct == "":
+#         commandmct = commandmct_single
+#     else:
+#         commandmct = commandmct +'\n' +commandmct_single
 
-mctcommandfile = "MCT_STLB.txt"
-with open(mctcommandfile, "w", encoding="utf-8") as file:
-    file.write(commandmct)
-print(f"$ 字串已成功寫入 {mctcommandfile} 文件。")
+# mctcommandfile = "MCT_STLB.txt"
+# with open(mctcommandfile, "w", encoding="utf-8") as file:
+#     file.write(commandmct)
+# print(f"$ 字串已成功寫入 {mctcommandfile} 文件。")
 
+# %% 自行計算斷面
+run_id =0
 
+secid = run_id
+
+B_top = df_section['B1'][secid] +df_section['B2'][secid] +df_section['B3'][secid] 
+B_bot = df_section['B4'][secid] +df_section['B5'][secid] +df_section['B6'][secid] 
+print('break point')
 
