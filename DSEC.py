@@ -1,5 +1,6 @@
 import pandas as pd
 import re
+import math
 
 def Generatemct(df_sec, df_rs, num_id):
     """生成Steel Girder MCT指令
@@ -83,11 +84,74 @@ def Generatemct(df_sec, df_rs, num_id):
 
     return line_all
 
+def Girdersection(secid, df_section):
+    # 計算頂板
+    B_top = df_section['B1'][secid] +df_section['B2'][secid] +df_section['B3'][secid] 
+    t1 = df_section['t1'][secid]
+
+    area_top = B_top*t1
+    iyy_top = B_top*(t1**3)/12
+    izz_top = t1*(B_top**3)/12
+
+    z2top_top = t1/2
+    y2ref_top = df_section['Ref_top'][secid] +B_top/2
+
+    # 計算左腹板
+    H = df_section['H'][secid]
+    tw1 = df_section['tw1'][secid]
+
+    difference_y1 = df_section['Ref_top'][secid] +df_section['B1'][secid] -df_section['Ref_bot'][secid] -df_section['B4'][secid]
+    inclineangle1 = math.atan(difference_y1 /H)
+    thicknesswide1 = tw1/math.cos(inclineangle1)
+
+    area_web1 = thicknesswide1*H
+    iyy_web1 = thicknesswide1*(H**3)/12
+    izz_web1 = H*(thicknesswide1**3)/12
+
+    z2top_web1 = t1 +H/2
+    y2ref_web1 = (df_section['Ref_top'][secid] +df_section['B1'][secid] +df_section['Ref_bot'][secid] +df_section['B4'][secid])/2 -thicknesswide1/2
+
+    # 計算右腹板
+    tw2 = df_section['tw2'][secid]
+
+    difference_y2 = df_section['Ref_top'][secid] +df_section['B1'][secid] +df_section['B2'][secid] -df_section['Ref_bot'][secid] -df_section['B4'][secid] -df_section['B5'][secid]
+    inclineangle2 = math.atan(difference_y2 /H)
+    thicknesswide2 = tw2/math.cos(inclineangle2)
+
+    area_web2 = thicknesswide2*H
+    iyy_web2 = thicknesswide2*(H**3)/12
+    izz_web2 = H*(thicknesswide2**3)/12
+
+    z2top_web2 = t1 +H/2
+    y2ref_web2 = (df_section['Ref_top'][secid] +df_section['B1'][secid] +df_section['B2'][secid] +df_section['Ref_bot'][secid] +df_section['B4'][secid] +df_section['B5'][secid])/2 +thicknesswide2/2
+
+    # 計算底版
+    B_bot = df_section['B4'][secid] +df_section['B5'][secid] +df_section['B6'][secid]
+    t2 = df_section['t2'][secid]
+
+    area_bot = B_bot*t2
+    iyy_bot = B_bot*(t2**3)/12
+    izz_bot = t2*(B_bot**3)/12
+
+    z2top_bot = t1 +H +t2/2
+    y2ref_bot = df_section['Ref_bot'][secid] +B_bot/2
+
+    # 總斷面
+    ## 面積
+    area_all = area_top +area_web1 +area_web2 +area_bot
+    ## 中性軸
+    z_na = (area_top*z2top_top +area_web1*z2top_web1 +area_web2*z2top_web2 +area_bot*z2top_bot) /area_all
+    y_na = (area_top*y2ref_top +area_web1*y2ref_web1 +area_web2*y2ref_web2 +area_bot*y2ref_bot) /area_all
+    ## 慣性矩
+    iyy_all = iyy_top +area_top*(z_na -z2top_top)**2 +iyy_web1 +area_web1*(z_na -z2top_web1)**2 +iyy_web2 +area_web2*(z_na -z2top_web2)**2 +iyy_bot +area_bot*(z_na -z2top_bot)**2
+    izz_all = izz_top +area_top*(y_na -y2ref_top)**2 +izz_web1 +area_web1*(y_na -y2ref_web1)**2 +izz_web2 +area_web2*(y_na -y2ref_web2)**2 +izz_bot +area_bot*(y_na -y2ref_bot)**2
+
+    return area_all, z_na, y_na, iyy_all, izz_all
 
 
 
 # %% 讀取輸入
-inputfile = r"D:\Users\63427\Desktop\Code\鋼床鈑\Steeldeckgirder\Section.xlsx"
+inputfile = r"/Users/chih/Documents/Code/Steeldeckgirder/Section.xlsx"
 df_section = pd.read_excel(inputfile, sheet_name='鋼床鈑', skiprows=[1])
 df_ribs = pd.read_excel(inputfile, sheet_name='加勁鈑')
 
@@ -107,12 +171,31 @@ df_ribs = pd.read_excel(inputfile, sheet_name='加勁鈑')
 #     file.write(commandmct)
 # print(f"$ 字串已成功寫入 {mctcommandfile} 文件。")
 
-# %% 自行計算斷面
-run_id =0
+# %% 計算主梁斷面
+# for run_id in range(len(df_section)):
+#     area_girder, z_girder, y_girder, iyy_girder, izz_girder = Girdersection(run_id, df_section)
 
-secid = run_id
+# %% 計算加勁鈑
+rib_id = 0
+r_id = rib_id
 
-B_top = df_section['B1'][secid] +df_section['B2'][secid] +df_section['B3'][secid] 
-B_bot = df_section['B4'][secid] +df_section['B5'][secid] +df_section['B6'][secid] 
+if df_ribs['Type'][r_id] == 'Flat':
+    area_r = df_ribs['H/H/H'][r_id]*df_ribs['B/B/B1'][r_id]
+    z_r = df_ribs['H/H/H'][r_id]/2
+    y_r = 0
+    iyy_r = df_ribs['B/B/B1'][r_id]*(df_ribs['H/H/H'][r_id])**3/12
+    izz_r = df_ribs['H/H/H'][r_id]*(df_ribs['B/B/B1'][r_id])**3/12
+elif df_ribs['Type'][r_id] == 'Tee':
+    bt = df_ribs['B/B/B1'][r_id]
+    tft = df_ribs['/tf/t'][r_id]
+    ht = df_ribs['H/H/H'][r_id]
+    twt = df_ribs['/tw/B2'][r_id]
+    area_r = bt*tft +(ht-tft)*twt
+
+    z_r = (ht-tft)*twt*(ht-tft)/2 +bt*tft*(ht-tft/2) 
+    y_r = 0
+
+    iyy_r = twt*(ht-tft)**3/12 +twt*(ht-tft)*(z_r-(ht-tft)/2)**2 +bt*tft**3/12 +bt*tft*(z_r-(ht-tft/2) )**2
+    izz_r = (ht-tft)*twt**3/12 +tft*bt**3/12
 print('break point')
 
