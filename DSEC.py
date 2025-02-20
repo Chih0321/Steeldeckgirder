@@ -3,9 +3,18 @@ import numpy as np
 import re
 import math
 import os
-from openpyxl import load_workbook
-from openpyxl.styles import Font, Border, Side
-from openpyxl.styles import PatternFill
+import openpyxl
+
+import sys
+from PySide6 import QtCore
+from PySide6.QtCore import QFile, QThread, QObject, Signal, QEventLoop, QTimer
+from PySide6.QtUiTools import QUiLoader
+from PySide6.QtGui import QIcon, QTextCursor
+from PySide6.QtWidgets import QApplication, QFileDialog
+import ctypes
+myappid = 'SteelDeck Secion Calculator' # arbitrary string
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
 
 def Generatemct(df_sec, df_rs, num_id):
     """生成Steel Girder MCT指令
@@ -517,33 +526,221 @@ def Sectioncalculation(inputfile):
         df_section_stlg_sap.to_excel(writer, sheet_name='Section_SAP', index=False)
         df_section_stlg.to_excel(writer, sheet_name='Section_Midas', index=False)
 
-    wb = load_workbook(output_file)
-    for sna in ['Section_SAP', 'Section_Midas']:
-        sheet = wb[sna]
-        font = Font(name='Consolas')
-        thin_border = Border(left=Side(style='thin'),
-                            right=Side(style='thin'),
-                            top=Side(style='thin'),
-                            bottom=Side(style='thin')
-                            )
-        for row in sheet.iter_rows():
-                for cell in row:
-                    cell.font = font
-                    cell.border = thin_border
-        for column_cells in sheet.columns:
-            length = max(len(str(cell.value)) for cell in column_cells) +2
-            sheet.column_dimensions[column_cells[0].column_letter].width = length
-    wb.save(output_file)
+
 
     print("> 計算結果輸出至 {}".format(inputfilename+"_Result.xlsx"))
 
 
-# %% 讀取輸入
-# inputfile = r"/Users/chih/Documents/Code/Steeldeckgirder/Section.xlsx" #MAC PATH
-inputdata = r"D:\Users\63427\Desktop\Code\鋼床鈑\Steeldeckgirder\Section.xlsx"
+class EmittingStr(QObject):
+    #將stdout轉到textbrowser
+    textWritten = Signal(str) 
+    def write(self, text):
+        self.textWritten.emit(str(text))
+        loop = QEventLoop()
+        QTimer.singleShot(1, loop.quit)
+        loop.exec()
+        QApplication.processEvents()
+        
+    def flush(self):
+        #stdout默認有write及flush,所以須補flush method避免stdout控制錯誤
+        pass
 
-Mctmainexe(inputdata)
-Sectioncalculation(inputdata)
+class workermct(QObject):
+    finished = Signal()
+    
+    def __init__(self):
+        QObject.__init__(self)
+        
+        
+    def pathparameter(self,pathinput):
+        self.pathparameters = pathinput
+        
+    def run(self):
+        """"input解包"""
+        inputexcelpath = self.pathparameters[0]            
 
+        filecheck = os.path.isfile(inputexcelpath)   
+        if filecheck == False:
+            print('檔案不存在')
+            self.finished.emit()
+        
+        """計算"""
+        inputdata = inputexcelpath 
+        Mctmainexe(inputdata)
+        
+        """傳出狀態"""
+        self.finished.emit() 
+        
+class workerssc(QObject):
+    finished = Signal()
+    
+    def __init__(self):
+        QObject.__init__(self)
+        
+        
+    def pathparameter(self,pathinput):
+        self.pathparameters = pathinput
+        
+    def run(self):
+        """"input解包"""
+        inputexcelpath = self.pathparameters[0]            
+
+        filecheck = os.path.isfile(inputexcelpath)   
+        if filecheck == False:
+            print('檔案不存在')
+            self.finished.emit()
+        
+        """計算"""
+        inputdata = inputexcelpath 
+        Sectioncalculation(inputdata)
+        
+        """傳出狀態"""
+        self.finished.emit() 
+
+class MainWindow(QObject):
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__()
+        self._window = None        
+        self.setup_ui()   
+        
+        #將stdout轉到textbrowser
+        sys.stdout = EmittingStr()
+        sys.stdout.textWritten.connect(self.outputWritten) 
+
+    @property
+    def window(self):
+        """The main window object"""
+        self._window.setWindowTitle("SteelDeck Section Calculator")
+        self._window.setWindowIcon(QIcon("./media/beam.png"))
+
+        return self._window
+    
+    def setup_ui(self):
+        loader = QUiLoader()
+        file = QFile('./dsec.ui')
+        file.open(QFile.ReadOnly)
+        self._window = loader.load(file)
+        file.close()
+        
+        self.set_button() 
+        
+    def outputWritten(self, text):
+        """將原print到stdout內容輸出至textbrowser"""
+        cursor = self._window.status.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        cursor.insertText(text)
+        self._window.status.setTextCursor(cursor)
+        self._window.status.ensureCursorVisible()
+        
+    def set_button(self):        
+        """Setup buttons"""  
+        """Choose input XML file path"""
+        self._window.pushButton.clicked.connect(self.chooseexcelfilepath) 
+        
+        """MCT execute"""
+        self._window.pushButton_2.clicked.connect(self.runmct)
+        
+        """SectionCalculate execute"""
+        self._window.pushButton_3.clicked.connect(self.runseccal)
+        
+        """Open folder"""
+        self._window.pushButton_4.clicked.connect(self.runof)
+
+    def runmct(self):
+        self._window.status.setText("$ Start Execution\n")
+
+        # Step 2: Create a QThread object
+        self.mct_thread = QThread()
+        # Step 3: Create a worker object
+        self.mct_worker = workermct()
+        # Step 4: Move worker to the thread
+        self.mct_worker.moveToThread(self.mct_thread)
+        # Step 5: Connect signals and slots
+        self.mct_thread.started.connect(self.mct_worker.run)
+        self.mct_worker.finished.connect(self.mct_thread.quit)
+        self.mct_worker.finished.connect(self.mct_worker.deleteLater)
+        self.mct_thread.finished.connect(self.mct_thread.deleteLater)   
+        # Step 6: Set input
+        'Input Parameters'
+        input_excelpath = self._window.lineEdit.text()
+
+        'Input list'
+        inputparameters = [input_excelpath]
+        
+        '傳入worker'    
+        self.mct_worker.pathparameter(inputparameters)
+        # Step 7: Start the thread
+        self.mct_thread.start()
+        # Final resets
+        self._window.pushButton_2.setEnabled(False)
+        
+        self.mct_thread.finished.connect(
+            lambda: self._window.pushButton_2.setEnabled(True)
+        )
+        self.mct_thread.finished.connect(
+            lambda: self._window.status.append("$ Finish Execution")
+        )
+
+    def runseccal(self):
+        self._window.status.setText("$ Start Execution\n")
+
+        # Step 2: Create a QThread object
+        self.ssc_thread = QThread()
+        # Step 3: Create a worker object
+        self.ssc_worker = workerssc()
+        # Step 4: Move worker to the thread
+        self.ssc_worker.moveToThread(self.ssc_thread)
+        # Step 5: Connect signals and slots
+        self.ssc_thread.started.connect(self.ssc_worker.run)
+        self.ssc_worker.finished.connect(self.ssc_thread.quit)
+        self.ssc_worker.finished.connect(self.ssc_worker.deleteLater)
+        self.ssc_thread.finished.connect(self.ssc_thread.deleteLater)   
+        # Step 6: Set input
+        'Input Parameters'
+        input_excelpath = self._window.lineEdit.text()
+
+        'Input list'
+        inputparameters = [input_excelpath]
+        
+        '傳入worker'    
+        self.ssc_worker.pathparameter(inputparameters)
+        # Step 7: Start the thread
+        self.ssc_thread.start()
+        # Final resets
+        self._window.pushButton_3.setEnabled(False)
+        
+        self.ssc_thread.finished.connect(
+            lambda: self._window.pushButton_3.setEnabled(True)
+        )
+        self.ssc_thread.finished.connect(
+            lambda: self._window.status.append("$ Finish Execution")
+        )
+
+    def runof(self):
+        input_excelpath = self._window.lineEdit.text()
+        (outputpath, filename_temp) = os.path.split(input_excelpath)
+        try:
+            os.startfile(outputpath)
+        except:
+            os.startfile(os.path.dirname(__file__)+'/example')
+        
+        
+    '''主程序執行的槽函數'''         
+    @QtCore.Slot()    
+    def chooseexcelfilepath(self):
+        filename, filetype = QFileDialog.getOpenFileName(None, "Open file", filter='Excel (*.xlsm *.xlsx)')
+        self._window.lineEdit.setText(filename)
+
+if '__main__' == __name__:
+    
+    app = QApplication.instance()
+    if app is None: 
+        app = QApplication()
+    
+    mainwindow = MainWindow()
+    mainwindow.window.show()
+
+    ret = app.exec()
+    sys.exit(ret)
 
 
