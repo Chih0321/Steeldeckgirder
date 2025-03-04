@@ -123,57 +123,59 @@ def Mctmainexe(inputfile):
     print("> MCT指令已成功寫入 {}。".format(inputfilename+"_MCT_STLB.txt"))
 
 
-def Girdersection(secid, df_section):
-    # 計算頂板
-    B_top = df_section['B1'][secid] +df_section['B2'][secid] +df_section['B3'][secid] 
-    t1 = df_section['t1'][secid]
+def Girdersection(B_top, t1, B_bot, t2, H, tw1_i, tw2_i, ref_top, ref_bot, B1, B2, B4, B5):
+    """主梁斷面計算(不含加勁)
 
+    Args:
+        B_top (float): 頂版寬/有效頂版寬
+        t1 (float): 頂版厚
+        B_bot (float): 底版寬/有效底版寬
+        t2 (float): 底版厚
+        H (float): 淨高
+        tw1_i (float): 左腹鈑厚
+        tw2_i (float): 右腹鈑厚
+        ref_top (float): 頂版位置參考距離
+        ref_bot (float): 底版位置參考距離
+        B1 (float): 頂版B1
+        B2 (float): 頂版B2
+        B4 (float): 底版B4
+        B5 (float): 底版B5
+
+    Returns:
+        float: 計算之斷面積, 中性軸位置, 慣性矩
+    """
+
+    # 計算頂板
     area_top = B_top*t1
     iyy_top = B_top*(t1**3)/12
     izz_top = t1*(B_top**3)/12
 
     z2top_top = t1/2
-    y2ref_top = df_section['Ref_top'][secid] +B_top/2
+    y2ref_top = ref_top +B_top/2
 
     # 計算左腹板
-    H = df_section['H'][secid]
-    tw1 = df_section['tw1'][secid]
-
-    difference_y1 = df_section['Ref_top'][secid] +df_section['B1'][secid] -df_section['Ref_bot'][secid] -df_section['B4'][secid]
-    inclineangle1 = math.atan(difference_y1 /H)
-    thicknesswide1 = tw1/math.cos(inclineangle1)
-
-    area_web1 = thicknesswide1*H
-    iyy_web1 = thicknesswide1*(H**3)/12
-    izz_web1 = H*(thicknesswide1**3)/12
+    area_web1 = tw1_i*H
+    iyy_web1 = tw1_i*(H**3)/12
+    izz_web1 = H*(tw1_i**3)/12
 
     z2top_web1 = t1 +H/2
-    y2ref_web1 = (df_section['Ref_top'][secid] +df_section['B1'][secid] +df_section['Ref_bot'][secid] +df_section['B4'][secid])/2 -thicknesswide1/2
+    y2ref_web1 = (ref_top +B1 +ref_bot +B4)/2 -tw1_i/2
 
     # 計算右腹板
-    tw2 = df_section['tw2'][secid]
-
-    difference_y2 = df_section['Ref_top'][secid] +df_section['B1'][secid] +df_section['B2'][secid] -df_section['Ref_bot'][secid] -df_section['B4'][secid] -df_section['B5'][secid]
-    inclineangle2 = math.atan(difference_y2 /H)
-    thicknesswide2 = tw2/math.cos(inclineangle2)
-
-    area_web2 = thicknesswide2*H
-    iyy_web2 = thicknesswide2*(H**3)/12
-    izz_web2 = H*(thicknesswide2**3)/12
+    area_web2 = tw2_i*H
+    iyy_web2 = tw2_i*(H**3)/12
+    izz_web2 = H*(tw2_i**3)/12
 
     z2top_web2 = t1 +H/2
-    y2ref_web2 = (df_section['Ref_top'][secid] +df_section['B1'][secid] +df_section['B2'][secid] +df_section['Ref_bot'][secid] +df_section['B4'][secid] +df_section['B5'][secid])/2 +thicknesswide2/2
+    y2ref_web2 = (ref_top +B1 +B2 +ref_bot +B4 +B5)/2 +tw2_i/2
 
     # 計算底版
-    B_bot = df_section['B4'][secid] +df_section['B5'][secid] +df_section['B6'][secid]
-    t2 = df_section['t2'][secid]
-
     area_bot = B_bot*t2
     iyy_bot = B_bot*(t2**3)/12
     izz_bot = t2*(B_bot**3)/12
 
     z2top_bot = t1 +H +t2/2
-    y2ref_bot = df_section['Ref_bot'][secid] +B_bot/2
+    y2ref_bot = ref_bot +B_bot/2
 
     # 總斷面
     ## 面積
@@ -248,6 +250,109 @@ def Ribproperty(df_ribs):
     return dict_r_property
 
 
+def Includeribs(df_section, df_rib_property, run_id, section_area, section_zna, section_yna, section_iyy, section_izz, dict_position_top, dict_position_bot):
+    ## 頂版加勁
+    position_rib_top_y = []
+    area_rib_top = []
+    for key, item in dict_position_top.items():
+        if not pd.isna(df_section[key][run_id]):
+            ### 單獨rib斷面性質提取
+            rib_type = df_section[key][run_id]
+            rib_area = df_rib_property['area'][rib_type]
+            rib_z_p = df_rib_property['z_p_na'][rib_type]
+            rib_z_n = df_rib_property['z_n_na'][rib_type]
+            rib_y = df_rib_property['y_na'][rib_type]
+            rib_iyy = df_rib_property['iyy'][rib_type]
+            rib_izz = df_rib_property['izz'][rib_type]
+
+            ### 提取ribs間距
+            rib_spacing = re.split(r'\s*,\s*', df_section[item[0]][run_id])
+            rib_num = len(rib_spacing)
+
+            ### 參考位置定位與初始化
+            rib_z_level = item[1]
+            rib_y_level = item[2]
+            rib_dist_y = 0
+            rib_area_top_temp = 0
+            ### 合成性質計算
+            for rr in range(len(rib_spacing)):
+                #### rib座標位置定出
+                set_z = rib_z_level + rib_z_n
+                rib_dist_y = rib_dist_y + float(rib_spacing[rr])
+                set_y = rib_y_level + rib_dist_y
+                #### 計算考慮範圍內rib
+                if not (item[3][0] < set_y < item[3][1]):
+                    area_pre = section_area
+                    zna_pre = section_zna
+                    yna_pre = section_yna
+
+                    section_area = section_area + rib_area
+                    rib_area_top_temp = rib_area_top_temp + rib_area
+                    area_rib_top.append(rib_area)                
+
+                    position_rib_top_z = set_z
+                    position_rib_top_y.append(set_y)
+
+                    section_zna = ((area_pre)*section_zna + rib_area*set_z)/section_area
+                    section_yna = ((area_pre)*section_yna + rib_area*set_y)/section_area
+
+                    section_iyy = section_iyy + area_pre*(section_zna - zna_pre)**2 + rib_iyy + rib_area*(section_zna - set_z)**2
+                    section_izz = section_izz + area_pre*(section_yna - yna_pre)**2 + rib_izz + rib_area*(section_yna - set_y)**2
+
+    ## 底版加勁
+    position_rib_bot_y = []
+    area_rib_bot = []
+    for key, item in dict_position_bot.items():
+        if not pd.isna(df_section[key][run_id]):
+            ### 單獨rib斷面性質提取
+            rib_type = df_section[key][run_id]
+            rib_area = df_rib_property['area'][rib_type]
+            rib_z_p = df_rib_property['z_p_na'][rib_type]
+            rib_z_n = df_rib_property['z_n_na'][rib_type]
+            rib_y = df_rib_property['y_na'][rib_type]
+            rib_iyy = df_rib_property['iyy'][rib_type]
+            rib_izz = df_rib_property['izz'][rib_type]
+
+            ### 提取ribs間距
+            rib_spacing = re.split(r'\s*,\s*', df_section[item[0]][run_id])
+            rib_num = len(rib_spacing)
+
+            ### 參考位置定位與初始化
+            rib_z_level = item[1]
+            rib_y_level = item[2]
+            rib_dist_y = 0
+            rib_area_bot_temp = 0
+            ### 合成性質計算
+            for rr in range(len(rib_spacing)):
+                #### rib座標位置定出
+                set_z = rib_z_level - rib_z_n
+                rib_dist_y = rib_dist_y + float(rib_spacing[rr])
+                set_y = rib_y_level + rib_dist_y
+                #### 計算考慮範圍內rib
+                if not (item[3][0] < set_y < item[3][1]):
+                    area_pre = section_area
+                    zna_pre = section_zna
+                    yna_pre = section_yna
+
+                    section_area = section_area + rib_area
+                    rib_area_bot_temp = rib_area_bot_temp + rib_area
+                    area_rib_bot.append(rib_area)
+
+                    position_rib_bot_z = set_z
+                    position_rib_bot_y.append(set_y)
+
+                    section_zna = ((area_pre)*section_zna + rib_area*set_z)/section_area
+                    section_yna = ((area_pre)*section_yna + rib_area*set_y)/section_area
+
+                    section_iyy = section_iyy + area_pre*(section_zna - zna_pre)**2 + rib_iyy + rib_area*(section_zna - set_z)**2
+                    section_izz = section_izz + area_pre*(section_yna - yna_pre)**2 + rib_izz + rib_area*(section_yna - set_y)**2                
+
+    rib_info_top = [rib_area_top_temp, area_rib_top, position_rib_top_z, position_rib_top_y]
+    rib_info_bot = [rib_area_bot_temp, area_rib_bot, position_rib_bot_z, position_rib_bot_y]
+
+    return section_area, section_zna, section_yna, section_iyy, section_izz, rib_info_top, rib_info_bot
+
+
 def Sectioncalculation(inputfile):
     """自行計算鋼床鈑斷面
 
@@ -284,107 +389,41 @@ def Sectioncalculation(inputfile):
                     }
     for run_id in range(len(df_section)):
         '''主要箱梁斷面性質'''
-        area_girder, z_girder, y_girder, iyy_girder, izz_girder = Girdersection(run_id, df_section)
+        H = df_section['H'][run_id]
+        tw1 = df_section['tw1'][run_id]
+        tw2 = df_section['tw2'][run_id]
+        difference_y1 = df_section['Ref_top'][run_id] +df_section['B1'][run_id] -df_section['Ref_bot'][run_id] -df_section['B4'][run_id]
+        inclineangle1 = math.atan(difference_y1 /H)
+        thicknesswide1 = tw1/math.cos(inclineangle1)
+        difference_y2 = df_section['Ref_top'][run_id] +df_section['B1'][run_id] +df_section['B2'][run_id] -df_section['Ref_bot'][run_id] -df_section['B4'][run_id] -df_section['B5'][run_id]
+        inclineangle2 = math.atan(difference_y2 /H)
+        thicknesswide2 = tw2/math.cos(inclineangle2)
+
+        area_girder, z_girder, y_girder, iyy_girder, izz_girder = Girdersection(df_section['B1'][run_id] +df_section['B2'][run_id] +df_section['B3'][run_id], 
+                                                                                df_section['t1'][run_id], 
+                                                                                df_section['B4'][run_id] +df_section['B5'][run_id] +df_section['B6'][run_id],
+                                                                                df_section['t2'][run_id], 
+                                                                                df_section['H'][run_id], 
+                                                                                thicknesswide1, 
+                                                                                thicknesswide2, 
+                                                                                df_section['Ref_top'][run_id], 
+                                                                                df_section['Ref_bot'][run_id], 
+                                                                                df_section['B1'][run_id], 
+                                                                                df_section['B2'][run_id], 
+                                                                                df_section['B4'][run_id], 
+                                                                                df_section['B5'][run_id]
+                                                                                )
 
         '''加入加勁鈑'''
-        ## 初始化
-        dict_position_top = {'Top-Flange (Left-type)':['Top-Flange (Left-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id]],
-                            'Top-Flange (Center-type)':['Top-Flange (Center-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id]+df_section['B1'][run_id]],
-                            'Top-Flange (Right-type)':['Top-Flange (Right-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id]+df_section['B1'][run_id]+df_section['B2'][run_id]],
+        dict_position_top = {'Top-Flange (Left-type)':['Top-Flange (Left-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id], [df_section['Ref_top'][run_id], df_section['Ref_top'][run_id]]],
+                            'Top-Flange (Center-type)':['Top-Flange (Center-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id]+df_section['B1'][run_id], [df_section['Ref_top'][run_id], df_section['Ref_top'][run_id]]],
+                            'Top-Flange (Right-type)':['Top-Flange (Right-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id]+df_section['B1'][run_id]+df_section['B2'][run_id], [df_section['Ref_top'][run_id], df_section['Ref_top'][run_id]]],
                             }
-        dict_position_bot = {'Bottom-Flange (Left-type)':['Bottom-Flange (Left-spacing)', df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id]],
-                            'Bottom-Flange (Center-type)':['Bottom-Flange (Center-spacing)',  df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id]+df_section['B4'][run_id]],
-                            'Bottom-Flange (Right-type)':['Bottom-Flange (Right-spacing)',  df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id]+df_section['B4'][run_id]+df_section['B5'][run_id]],
+        dict_position_bot = {'Bottom-Flange (Left-type)':['Bottom-Flange (Left-spacing)', df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id], [df_section['Ref_bot'][run_id], df_section['Ref_bot'][run_id]]],
+                            'Bottom-Flange (Center-type)':['Bottom-Flange (Center-spacing)',  df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id]+df_section['B4'][run_id], [df_section['Ref_bot'][run_id], df_section['Ref_bot'][run_id]]],
+                            'Bottom-Flange (Right-type)':['Bottom-Flange (Right-spacing)',  df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id]+df_section['B4'][run_id]+df_section['B5'][run_id], [df_section['Ref_bot'][run_id], df_section['Ref_bot'][run_id]]],
                             }
-        section_area = area_girder
-        section_zna = z_girder
-        section_yna = y_girder
-        section_iyy = iyy_girder
-        section_izz = izz_girder
-
-        ## 頂版加勁
-        position_rib_top_y = []
-        area_rib_top = []
-        for key, item in dict_position_top.items():
-            if not pd.isna(df_section[key][run_id]):
-                rib_type = df_section[key][run_id]
-                rib_area = df_rib_property['area'][rib_type]
-                rib_z_p = df_rib_property['z_p_na'][rib_type]
-                rib_z_n = df_rib_property['z_n_na'][rib_type]
-                rib_y = df_rib_property['y_na'][rib_type]
-                rib_iyy = df_rib_property['iyy'][rib_type]
-                rib_izz = df_rib_property['izz'][rib_type]
-
-                rib_spacing = re.split(r'\s*,\s*', df_section[item[0]][run_id])
-                rib_num = len(rib_spacing)
-
-                rib_z_level = item[1]
-                rib_y_level = item[2]
-                rib_dist_y = 0
-                rib_area_top_temp = 0
-                for rr in range(len(rib_spacing)):
-                    area_pre = section_area
-                    zna_pre = section_zna
-                    yna_pre = section_yna
-
-                    section_area = section_area + rib_area
-                    rib_area_top_temp = rib_area_top_temp + rib_area
-                    area_rib_top.append(rib_area)
-
-                    set_z = rib_z_level + rib_z_n
-                    rib_dist_y = rib_dist_y + float(rib_spacing[rr])
-                    set_y = rib_y_level + rib_dist_y
-
-                    position_rib_top_z = set_z
-                    position_rib_top_y.append(set_y)
-
-                    section_zna = ((area_pre)*section_zna + rib_area*set_z)/section_area
-                    section_yna = ((area_pre)*section_yna + rib_area*set_y)/section_area
-
-                    section_iyy = section_iyy + area_pre*(section_zna - zna_pre)**2 + rib_iyy + rib_area*(section_zna - set_z)**2
-                    section_izz = section_izz + area_pre*(section_yna - yna_pre)**2 + rib_izz + rib_area*(section_yna - set_y)**2
-
-        ## 底版加勁
-        position_rib_bot_y = []
-        area_rib_bot = []
-        for key, item in dict_position_bot.items():
-            if not pd.isna(df_section[key][run_id]):
-                rib_type = df_section[key][run_id]
-                rib_area = df_rib_property['area'][rib_type]
-                rib_z_p = df_rib_property['z_p_na'][rib_type]
-                rib_z_n = df_rib_property['z_n_na'][rib_type]
-                rib_y = df_rib_property['y_na'][rib_type]
-                rib_iyy = df_rib_property['iyy'][rib_type]
-                rib_izz = df_rib_property['izz'][rib_type]
-
-                rib_spacing = re.split(r'\s*,\s*', df_section[item[0]][run_id])
-                rib_num = len(rib_spacing)
-
-                rib_z_level = item[1]
-                rib_y_level = item[2]
-                rib_dist_y = 0
-                rib_area_bot_temp = 0
-                for rr in range(len(rib_spacing)):
-                    area_pre = section_area
-                    zna_pre = section_zna
-                    yna_pre = section_yna
-
-                    section_area = section_area + rib_area
-                    rib_area_bot_temp = rib_area_bot_temp + rib_area
-                    area_rib_bot.append(rib_area)
-
-                    set_z = rib_z_level - rib_z_n
-                    rib_dist_y = rib_dist_y + float(rib_spacing[rr])
-                    set_y = rib_y_level + rib_dist_y
-
-                    position_rib_bot_z = set_z
-                    position_rib_bot_y.append(set_y)
-
-                    section_zna = ((area_pre)*section_zna + rib_area*set_z)/section_area
-                    section_yna = ((area_pre)*section_yna + rib_area*set_y)/section_area
-
-                    section_iyy = section_iyy + area_pre*(section_zna - zna_pre)**2 + rib_iyy + rib_area*(section_zna - set_z)**2
-                    section_izz = section_izz + area_pre*(section_yna - yna_pre)**2 + rib_izz + rib_area*(section_yna - set_y)**2                
+        section_area, section_zna, section_yna, section_iyy, section_izz, rib_if_top, rib_if_bot = Includeribs(df_section, df_rib_property, run_id, area_girder, z_girder, y_girder, iyy_girder, izz_girder, dict_position_top, dict_position_bot)
 
         '''Shear & Torsion調整(僅含箱梁不含懸伸翼版)'''
         ## Shear
@@ -461,6 +500,10 @@ def Sectioncalculation(inputfile):
         zzz_w2 = (shear_h*thicknesswide2)*abs(section_yna - dist_w2)
 
         ## 頂版加勁版貢獻
+        rib_area_top_temp = rib_if_top[0]
+        area_rib_top = rib_if_top[1]
+        position_rib_top_z = rib_if_top[2]
+        position_rib_top_y = rib_if_top[3]
         ### Zyy
         zyy_rib_top = rib_area_top_temp*abs(section_zna - position_rib_top_z)
         ### Zzz
@@ -469,6 +512,10 @@ def Sectioncalculation(inputfile):
             zzz_rib_top = zzz_rib_top +area_rib_top[i]*abs(section_yna -position_rib_top_y[i])
 
         ## 底版加勁版貢獻
+        rib_area_bot_temp = rib_if_bot[0]
+        area_rib_bot = rib_if_bot[1]
+        position_rib_bot_z = rib_if_bot[2]
+        position_rib_bot_y = rib_if_bot[3]
         ### Zyy
         zyy_rib_bot = rib_area_bot_temp*abs(section_zna - position_rib_bot_z)
         ### Zzz
@@ -496,7 +543,6 @@ def Sectioncalculation(inputfile):
         dict_section['Zzz'].append(section_zzz)
 
     df_section_stlg = pd.DataFrame.from_dict(dict_section)
-
     df_section_stlg_sap = pd.DataFrame()
     df_section_stlg_sap['Name'] = df_section_stlg['Name']
     df_section_stlg_sap['S2L'] = (df_section_stlg['Izz']/(1E12))/(df_section_stlg['yna_left']/1000)
@@ -522,10 +568,234 @@ def Sectioncalculation(inputfile):
         df_section_stlg_sap.to_excel(writer, sheet_name='Section_SAP', index=False)
         df_section_stlg.to_excel(writer, sheet_name='Section_Midas', index=False)
 
-
-
     print("> 計算結果輸出至 {}".format(inputfilename+"_Result.xlsx"))
 
 
-inputdata = r"D:\Users\63427\Desktop\Code\鋼床鈑\Steeldeckgirder\test\Section_GA.xlsm"
-Sectioncalculation(inputdata)
+def Effectivesection(inputfile):
+    """計算鋼床鈑有效斷面
+
+    Args:
+        inputfile (str): 輸入參數的excel
+    """
+    print("$ 執行有效斷面計算。")
+    # %% 讀檔
+    (outputpath, filename_temp) = os.path.split(inputfile)
+    inputfilename = filename_temp.split(".")[0]
+
+    df_section = pd.read_excel(inputfile, sheet_name='鋼床鈑', skiprows=[1])
+    df_ribs = pd.read_excel(inputfile, sheet_name='加勁鈑')
+
+    # %% 計算加勁鈑
+    dict_rib_property = Ribproperty(df_ribs)
+    df_rib_property = pd.DataFrame.from_dict(dict_rib_property)
+    df_rib_property = df_rib_property.set_index('Name')  
+
+    # %% 有效斷面計算
+    dict_effectivesection = {'Name':[],
+                            'EffectiveWide(top)':[],
+                            'Formula(top)':[],
+                            'b/l(top)':[],
+                            'EffectiveWide(bot)':[],
+                            'Formula(bot)':[],
+                            'b/l(bot)':[],
+                            'EffectiveWide(web)':[],
+                            'Formula(web)':[],
+                            'b/l(web)':[],
+                            'Area_y':[],
+                            'Iyy':[],
+                            'Area_z':[],
+                            'Izz':[],
+                            'yna_right':[],
+                            'yna_left':[],
+                            'zna_top':[],
+                            'zna_bot':[],
+                            }
+    for run_id in range(len(df_section)):
+        '''主要箱梁有效斷面性質'''
+        difference_y1 = df_section['Ref_top'][run_id] +df_section['B1'][run_id] -df_section['Ref_bot'][run_id] -df_section['B4'][run_id]
+        inclineangle1 = math.atan(difference_y1 /df_section['H'][run_id])
+        thicknesswide1 = df_section['tw1'][run_id]/math.cos(inclineangle1)
+
+        difference_y2 = df_section['Ref_top'][run_id] +df_section['B1'][run_id] +df_section['B2'][run_id] -df_section['Ref_bot'][run_id] -df_section['B4'][run_id] -df_section['B5'][run_id]
+        inclineangle2 = math.atan(difference_y2 /df_section['H'][run_id])
+        thicknesswide2 = df_section['tw2'][run_id]/math.cos(inclineangle2)
+
+        # 有效幅計算
+        # NOTE: 代入公式的b採心到心，在一般箱梁SDB採淨間距
+        b_top_1 = df_section['B1'][run_id] -thicknesswide1/2
+        b_top_2 = (df_section['B2'][run_id] +thicknesswide1/2 +thicknesswide2/2)/2
+        b_top_3 = df_section['B3'][run_id] -thicknesswide2/2
+        b_bot_1 = df_section['B4'][run_id] -thicknesswide1/2
+        b_bot_2 = (df_section['B5'][run_id] +thicknesswide1/2 +thicknesswide2/2)/2
+        b_bot_3 = df_section['B6'][run_id] -thicknesswide2/2
+        b_h = (df_section['H'][run_id] +df_section['t1'][run_id]/2 +df_section['t2'][run_id]/2)/2
+
+        ie = df_section['IE'][run_id]
+        lei = df_section['LEI'][run_id]
+        leo = df_section['LEO'][run_id]
+
+        # TODO: 確認道示原意，以及先後內插有無差異
+        def effectiveflange(IE, B, LE):
+            match IE:
+                case 1|5:
+                    # (11.3.1)
+                    note_formula = '11.3.1'
+                    note_bl = B/LE
+                    if B/LE <= 0.05:
+                        lambda_e = B
+                    elif B/LE <= 0.3:
+                        lambda_e = (1.1 - 2*(B/LE))*B
+                    else:
+                        lambda_e = 0.15*LE
+
+                case 3|7:
+                    # (11.3.2)
+                    note_formula = '11.3.2'
+                    note_bl = B/LE
+                    if B/LE <= 0.02:
+                        lambda_e = B
+                    elif B/LE <= 0.3:
+                        lambda_e = (1.06 - 3.2*(B/LE) + 4.5*(B/LE)**2)*B
+                    else:
+                        lambda_e = 0.15*LE
+                    
+                case 2|4|6|8:
+                    # 先用內插完的L代入11.3.2
+                    note_formula = 'insert'
+                    note_bl = B/LE
+                    if B/LE <= 0.02:
+                        lambda_e = B
+                    elif B/LE <= 0.3:
+                        lambda_e = (1.06 - 3.2*(B/LE) + 4.5*(B/LE)**2)*B
+                    else:
+                        lambda_e = 0.15*LE
+
+            return lambda_e, note_formula, note_bl
+
+        lambda_top1, note_formula_top1, note_bl_top1 = effectiveflange(ie, b_top_1, lei)
+        lambda_top2, note_formula_top2, note_bl_top2 = effectiveflange(ie, b_top_2, lei)
+        lambda_top3, note_formula_top3, note_bl_top3 = effectiveflange(ie, b_top_3, lei)
+        lambda_bot1, note_formula_bot1, note_bl_bot1 = effectiveflange(ie, b_bot_1, lei)
+        lambda_bot2, note_formula_bot2, note_bl_bot2 = effectiveflange(ie, b_bot_2, lei)
+        lambda_bot3, note_formula_bot3, note_bl_bot3 = effectiveflange(ie, b_bot_3, lei)
+        lambda_h, note_formula_h, note_bl_h = effectiveflange(ie, b_h, leo)
+
+        ## 有效斷面控制點
+        top_e1 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] - (lambda_top1 + thicknesswide1/2)
+        top_e2 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] + (lambda_top2 - thicknesswide1/2)
+        top_e3 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] + df_section['B2'][run_id] - (lambda_top2 - thicknesswide2/2)
+        top_e4 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] + df_section['B2'][run_id] + (lambda_top3 + thicknesswide2/2)
+        bot_e1 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] - (lambda_bot1 + thicknesswide1/2)
+        bot_e2 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] + (lambda_bot2 - thicknesswide1/2)
+        bot_e3 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] + df_section['B5'][run_id] - (lambda_bot2 - thicknesswide2/2)
+        bot_e4 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] + df_section['B5'][run_id] + (lambda_bot3 + thicknesswide2/2)
+        h_e1 = df_section['t1'][run_id] + (lambda_h - df_section['t1'][run_id]/2)
+        h_e2 = df_section['t1'][run_id] + df_section['H'][run_id] - (lambda_h - df_section['t2'][run_id]/2)
+
+        # 主梁有效斷面計算
+        # NOTE: 座標系統名稱與MIDAS一致(以前反卡氏xy)，以便對照全斷面結果
+        # 對y軸
+        area_ye, z_e, y_, iyy_e, izz_ = Girdersection(lambda_top1 + 2*lambda_top2 + lambda_top3, 
+                                                        df_section['t1'][run_id], 
+                                                        lambda_bot1 + 2*lambda_bot2 + lambda_bot3,
+                                                        df_section['t2'][run_id], 
+                                                        df_section['H'][run_id], 
+                                                        thicknesswide1, 
+                                                        thicknesswide2, 
+                                                        df_section['Ref_top'][run_id], 
+                                                        df_section['Ref_bot'][run_id], 
+                                                        df_section['B1'][run_id], 
+                                                        df_section['B2'][run_id], 
+                                                        df_section['B4'][run_id], 
+                                                        df_section['B5'][run_id]
+                                                        )
+
+        # 對z軸
+        area_ze, z_, y_e, iyy_, izz_e = Girdersection(df_section['B1'][run_id] +df_section['B2'][run_id] +df_section['B3'][run_id], 
+                                                        df_section['t1'][run_id], 
+                                                        df_section['B4'][run_id] +df_section['B5'][run_id] +df_section['B6'][run_id],
+                                                        df_section['t2'][run_id], 
+                                                        lambda_h*2-df_section['t1'][run_id]/2-df_section['t2'][run_id]/2, 
+                                                        thicknesswide1, 
+                                                        thicknesswide2, 
+                                                        df_section['Ref_top'][run_id], 
+                                                        df_section['Ref_bot'][run_id], 
+                                                        df_section['B1'][run_id], 
+                                                        df_section['B2'][run_id], 
+                                                        df_section['B4'][run_id], 
+                                                        df_section['B5'][run_id]
+                                                        )
+
+        '''加入加勁鈑'''
+        # 對y軸
+        dict_ye_top = {'Top-Flange (Left-type)':['Top-Flange (Left-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id], [df_section['Ref_top'][run_id], top_e1]],
+                        'Top-Flange (Center-type)':['Top-Flange (Center-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id]+df_section['B1'][run_id], [top_e2, top_e3]],
+                        'Top-Flange (Right-type)':['Top-Flange (Right-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id]+df_section['B1'][run_id]+df_section['B2'][run_id], [top_e4, df_section['Ref_top'][run_id]+df_section['B1'][run_id]+df_section['B2'][run_id]+df_section['B3'][run_id]]],
+                        }
+        dict_ye_bot = {'Bottom-Flange (Left-type)':['Bottom-Flange (Left-spacing)', df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id], [df_section['Ref_bot'][run_id], bot_e1]],
+                        'Bottom-Flange (Center-type)':['Bottom-Flange (Center-spacing)',  df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id]+df_section['B4'][run_id], [bot_e2, bot_e3]],
+                        'Bottom-Flange (Right-type)':['Bottom-Flange (Right-spacing)',  df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id]+df_section['B4'][run_id]+df_section['B5'][run_id], [bot_e4, df_section['Ref_bot'][run_id]+df_section['B4'][run_id]+df_section['B5'][run_id]+df_section['B6'][run_id]]],
+                        }
+        section_area_ye, section_zna_ye, section_yna_ye, section_iyy_ye, section_izz_ye, rib_info_top_ye, rib_info_bot_ye = Includeribs(df_section, df_rib_property, run_id, area_ye, z_e, y_, iyy_e, izz_, dict_ye_top, dict_ye_bot)
+
+        # 對z軸
+        dict_ze_top = {'Top-Flange (Left-type)':['Top-Flange (Left-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id], [df_section['Ref_top'][run_id], df_section['Ref_top'][run_id]]],
+                        'Top-Flange (Center-type)':['Top-Flange (Center-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id]+df_section['B1'][run_id], [top_e2, top_e2]],
+                        'Top-Flange (Right-type)':['Top-Flange (Right-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id]+df_section['B1'][run_id]+df_section['B2'][run_id], [top_e4, top_e4]],
+                        }
+        dict_ze_bot = {'Bottom-Flange (Left-type)':['Bottom-Flange (Left-spacing)', df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id], [df_section['Ref_bot'][run_id], df_section['Ref_bot'][run_id]]],
+                        'Bottom-Flange (Center-type)':['Bottom-Flange (Center-spacing)',  df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id]+df_section['B4'][run_id], [bot_e2, bot_e2]],
+                        'Bottom-Flange (Right-type)':['Bottom-Flange (Right-spacing)',  df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id]+df_section['B4'][run_id]+df_section['B5'][run_id], [bot_e4, bot_e4]],
+                        }
+        section_area_ze, section_zna_ze, section_yna_ze, section_iyy_ze, section_izz_ze, rib_info_top_ze, rib_info_bot_ze = Includeribs(df_section, df_rib_property, run_id, area_ze, z_, y_e, iyy_, izz_e, dict_ze_top, dict_ze_bot)
+
+        section_zna_bot = df_section['t1'][run_id] +df_section['H'][run_id] +df_section['t2'][run_id] -section_zna_ye
+        section_yna_right = df_section['B1'][run_id] +df_section['B2'][run_id] +df_section['B3'][run_id] -section_yna_ze
+
+        '''彙整結果'''
+        dict_effectivesection['Name'].append(df_section['Name'][run_id])
+        dict_effectivesection['EffectiveWide(top)'].append([lambda_top1, lambda_top2, lambda_top3])
+        dict_effectivesection['Formula(top)'].append([note_formula_top1, note_formula_top2, note_formula_top3])
+        dict_effectivesection['b/l(top)'].append([note_bl_top1, note_bl_top2, note_bl_top3])
+        dict_effectivesection['EffectiveWide(bot)'].append([lambda_bot1, lambda_bot2, lambda_bot3])
+        dict_effectivesection['Formula(bot)'].append([note_formula_bot1, note_formula_bot2, note_formula_bot3])
+        dict_effectivesection['b/l(bot)'].append([note_bl_bot1, note_bl_bot2, note_bl_bot3])
+        dict_effectivesection['EffectiveWide(web)'].append([lambda_h])
+        dict_effectivesection['Formula(web)'].append([note_formula_h])
+        dict_effectivesection['b/l(web)'].append([note_bl_h])
+        dict_effectivesection['Area_y'].append(section_area_ye)
+        dict_effectivesection['Iyy'].append(section_iyy_ye)
+        dict_effectivesection['zna_top'].append(section_zna_ye)
+        dict_effectivesection['zna_bot'].append(section_zna_bot)
+        dict_effectivesection['Area_z'].append(section_area_ze)
+        dict_effectivesection['Izz'].append(section_izz_ze)
+        dict_effectivesection['yna_right'].append(section_yna_right)
+        dict_effectivesection['yna_left'].append(section_yna_ze)
+
+    df_effectivesection_stlg = pd.DataFrame.from_dict(dict_effectivesection)
+    df_effectivesection_stlg_sap = pd.DataFrame()
+    df_effectivesection_stlg_sap['Name'] = df_effectivesection_stlg['Name']
+    df_effectivesection_stlg_sap['Axe'] = df_effectivesection_stlg['Area_y']/1E6
+    df_effectivesection_stlg_sap['Ixe'] = df_effectivesection_stlg['Iyy']/1E12
+    df_effectivesection_stlg_sap['SxeT'] = (df_effectivesection_stlg['Iyy']/(1E12))/(df_effectivesection_stlg['zna_top']/1000)
+    df_effectivesection_stlg_sap['SxeB'] = (df_effectivesection_stlg['Iyy']/(1E12))/(df_effectivesection_stlg['zna_bot']/1000)
+    df_effectivesection_stlg_sap['Aye'] = df_effectivesection_stlg['Area_z']/1E6
+    df_effectivesection_stlg_sap['Iye'] = df_effectivesection_stlg['Izz']/1E12
+    df_effectivesection_stlg_sap['SyeL'] = (df_effectivesection_stlg['Izz']/(1E12))/(df_effectivesection_stlg['yna_left']/1000)
+    df_effectivesection_stlg_sap['SyeR'] = (df_effectivesection_stlg['Izz']/(1E12))/(df_effectivesection_stlg['yna_right']/1000)
+
+    # %% 結果輸出
+    output_file = os.path.join(outputpath, inputfilename+"_EffectiveSec.xlsx")
+    with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
+        df_effectivesection_stlg_sap.to_excel(writer, sheet_name='Section_SDB', index=False)
+        df_effectivesection_stlg.to_excel(writer, sheet_name='Section_Calculation', index=False)
+
+    print("> 計算結果輸出至 {}".format(inputfilename+"_EffectiveSec.xlsx"))
+
+
+# %% Main
+inputdata = r"D:\Users\63427\Desktop\Code\鋼床鈑\Steeldeckgirder\test\Section_G.xlsm"
+inputfile = inputdata
+Sectioncalculation(inputfile)
+Effectivesection(inputfile)
+print('break')
