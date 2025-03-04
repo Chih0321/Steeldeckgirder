@@ -397,25 +397,32 @@ def Sectioncalculation(inputfile):
         '''Shear & Torsion調整(僅含箱梁不含懸伸翼版)'''
         ## Shear
         # NOTE 在斜腹鈑時可能不是這樣算，但無可以驗證的例子
-        shear_bt = df_section['B2'][run_id] +df_section['tw1'][run_id] +df_section['tw2'][run_id]
-        shear_bb = df_section['B5'][run_id] +df_section['tw1'][run_id] +df_section['tw2'][run_id]
+        difference_y1 = df_section['Ref_top'][run_id] +df_section['B1'][run_id] -df_section['Ref_bot'][run_id] -df_section['B4'][run_id]
+        inclineangle1 = math.atan(difference_y1 /df_section['H'][run_id])
+        thicknesswide1 = df_section['tw1'][run_id]/math.cos(inclineangle1)
+
+        difference_y2 = df_section['Ref_top'][run_id] +df_section['B1'][run_id] +df_section['B2'][run_id] -df_section['Ref_bot'][run_id] -df_section['B4'][run_id] -df_section['B5'][run_id]
+        inclineangle2 = math.atan(difference_y2 /df_section['H'][run_id])
+        thicknesswide2 = df_section['tw2'][run_id]/math.cos(inclineangle2)
+
+        shear_bt = df_section['B2'][run_id] +thicknesswide1 +thicknesswide2
+        shear_bb = df_section['B5'][run_id] +thicknesswide1 +thicknesswide2
         shear_t1 = df_section['t1'][run_id]
         shear_t2 = df_section['t2'][run_id]
         shear_h = df_section['H'][run_id]
-        shear_tw1 = df_section['tw1'][run_id]
-        shear_tw2 = df_section['tw2'][run_id]
+
 
         section_asy = shear_bt*shear_t1 + shear_bb*shear_t2
-        section_asz = shear_h*shear_tw1 + shear_h*shear_tw2
+        section_asz = shear_h*thicknesswide1 + shear_h*thicknesswide2
 
         ## Torison
         # 4A^2/(b/t)
-        torsion_bt = df_section['B2'][run_id] +df_section['tw1'][run_id]/2 +df_section['tw2'][run_id]/2
-        torsion_bb = df_section['B5'][run_id] +df_section['tw1'][run_id]/2 +df_section['tw2'][run_id]/2
+        torsion_bt = df_section['B2'][run_id] +thicknesswide1/2 +thicknesswide2/2
+        torsion_bb = df_section['B5'][run_id] +thicknesswide1/2 +thicknesswide2/2
         torsion_h = df_section['H'][run_id] +df_section['t1'][run_id]/2 +df_section['t2'][run_id]/2
-        torsion_area = torsion_bb*torsion_h
+        torsion_area = (torsion_bt + torsion_bb)*torsion_h/2
 
-        section_ixx = 4*(torsion_area)**2 /(torsion_bt/shear_t1 +torsion_bb/shear_t2 +torsion_h/shear_tw1 +torsion_h/shear_tw2)
+        section_ixx = 4*(torsion_area)**2 /(torsion_bt/shear_t1 +torsion_bb/shear_t2 +torsion_h/thicknesswide1 +torsion_h/thicknesswide2)   # 理論上在積分時應該是沿著斜邊H去走路徑，但因為都要處理cos問題，因此直接帶斜邊的tw
 
         '''Plastic Section Modulus'''
         ## 頂版貢獻
@@ -438,31 +445,28 @@ def Sectioncalculation(inputfile):
         zzz_bot_right = (dist_bot_rightna*shear_t2)*abs(dist_bot_rightna/2)
         zzz_bot = zzz_bot_left +zzz_bot_right
 
+        # NOTE 腹鈑貢獻部分，以通常情境計算，未處理NA軸跑進翼版狀況
         ## 腹版1貢獻
-        # NOTE 用很粗略算法
         ### Zyy
         dist_zna_w1_1 = section_zna -df_section['t1'][run_id]
-        zyy_w1_1 = (dist_zna_w1_1*shear_tw1)*abs(dist_zna_w1_1/2)
+        zyy_w1_1 = (dist_zna_w1_1*thicknesswide1)*abs(dist_zna_w1_1/2)
         dist_zna_w1_2 = section_zna_bot -df_section['t2'][run_id]
-        zyy_w1_2 = (dist_zna_w1_2*shear_tw1)*abs(dist_zna_w1_2/2)
+        zyy_w1_2 = (dist_zna_w1_2*thicknesswide1)*abs(dist_zna_w1_2/2)
         zyy_w1 = zyy_w1_1 +zyy_w1_2
         ### Zzz
-        # FIXME 斜腹版會不準
-        dist_w1 = (df_section['Ref_top'][run_id] +df_section['B1'][run_id] + df_section['Ref_bot'][run_id] +df_section['B4'][run_id])/2 -df_section['tw1'][run_id]/2
-        zzz_w1 = (shear_h*shear_tw1)*abs(section_yna - dist_w1)
+        dist_w1 = (df_section['Ref_top'][run_id] +df_section['B1'][run_id] + df_section['Ref_bot'][run_id] +df_section['B4'][run_id])/2 -thicknesswide1/2
+        zzz_w1 = (shear_h*thicknesswide1)*abs(section_yna - dist_w1)
         
         ## 腹版2貢獻
-        # NOTE 用很粗略算法
         ### Zyy
         dist_zna_w2_1 = section_zna -df_section['t2'][run_id]
-        zyy_w2_1 = (dist_zna_w2_1*shear_tw2)*abs(dist_zna_w2_1/2)
+        zyy_w2_1 = (dist_zna_w2_1*thicknesswide2)*abs(dist_zna_w2_1/2)
         dist_zna_w2_2 = section_zna_bot -df_section['t2'][run_id]
-        zyy_w2_2 = (dist_zna_w2_2*shear_tw2)*abs(dist_zna_w2_2/2)
+        zyy_w2_2 = (dist_zna_w2_2*thicknesswide2)*abs(dist_zna_w2_2/2)
         zyy_w2 = zyy_w2_1 +zyy_w2_2
         ### Zzz
-        # FIXME 斜腹版會不準
-        dist_w2 = (df_section['Ref_top'][run_id] +df_section['B1'][run_id] +df_section['B2'][run_id] + df_section['Ref_bot'][run_id] +df_section['B4'][run_id] +df_section['B5'][run_id])/2 +df_section['tw1'][run_id]/2
-        zzz_w2 = (shear_h*shear_tw2)*abs(section_yna - dist_w2)
+        dist_w2 = (df_section['Ref_top'][run_id] +df_section['B1'][run_id] +df_section['B2'][run_id] + df_section['Ref_bot'][run_id] +df_section['B4'][run_id] +df_section['B5'][run_id])/2 +thicknesswide2/2
+        zzz_w2 = (shear_h*thicknesswide2)*abs(section_yna - dist_w2)
 
         ## 頂版加勁版貢獻
         ### Zyy
