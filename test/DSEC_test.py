@@ -621,14 +621,14 @@ def Effectivesection(inputfile):
         thicknesswide2 = df_section['tw2'][run_id]/math.cos(inclineangle2)
 
         # 有效幅計算
-        # NOTE: 代入公式的b採心到心，在一般箱梁SDB採淨間距
-        b_top_1 = df_section['B1'][run_id] -thicknesswide1/2
-        b_top_2 = (df_section['B2'][run_id] +thicknesswide1/2 +thicknesswide2/2)/2
-        b_top_3 = df_section['B3'][run_id] -thicknesswide2/2
-        b_bot_1 = df_section['B4'][run_id] -thicknesswide1/2
-        b_bot_2 = (df_section['B5'][run_id] +thicknesswide1/2 +thicknesswide2/2)/2
-        b_bot_3 = df_section['B6'][run_id] -thicknesswide2/2
-        b_h = (df_section['H'][run_id] +df_section['t1'][run_id]/2 +df_section['t2'][run_id]/2)/2
+        # NOTE: 代入公式的b採淨間距
+        b_top_1 = df_section['B1'][run_id] -thicknesswide1
+        b_top_2 = df_section['B2'][run_id]/2
+        b_top_3 = df_section['B3'][run_id] -thicknesswide2
+        b_bot_1 = df_section['B4'][run_id] -thicknesswide1
+        b_bot_2 = df_section['B5'][run_id]/2
+        b_bot_3 = df_section['B6'][run_id] -thicknesswide2
+        b_h = df_section['H'][run_id]/2
 
         ie = df_section['IE'][run_id]
         lei = df_section['LEI'][run_id]
@@ -681,23 +681,23 @@ def Effectivesection(inputfile):
         lambda_h, note_formula_h, note_bl_h = effectiveflange(ie, b_h, leo)
 
         ## 有效斷面控制點
-        top_e1 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] - (lambda_top1 + thicknesswide1/2)
-        top_e2 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] + (lambda_top2 - thicknesswide1/2)
-        top_e3 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] + df_section['B2'][run_id] - (lambda_top2 - thicknesswide2/2)
-        top_e4 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] + df_section['B2'][run_id] + (lambda_top3 + thicknesswide2/2)
-        bot_e1 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] - (lambda_bot1 + thicknesswide1/2)
-        bot_e2 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] + (lambda_bot2 - thicknesswide1/2)
-        bot_e3 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] + df_section['B5'][run_id] - (lambda_bot2 - thicknesswide2/2)
-        bot_e4 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] + df_section['B5'][run_id] + (lambda_bot3 + thicknesswide2/2)
-        h_e1 = df_section['t1'][run_id] + (lambda_h - df_section['t1'][run_id]/2)
-        h_e2 = df_section['t1'][run_id] + df_section['H'][run_id] - (lambda_h - df_section['t2'][run_id]/2)
+        top_e1 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] - thicknesswide1 - lambda_top1
+        top_e2 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] + lambda_top2
+        top_e3 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] + df_section['B2'][run_id] - lambda_top2
+        top_e4 = df_section['Ref_top'][run_id] + df_section['B1'][run_id] + df_section['B2'][run_id] + thicknesswide2 + lambda_top3
+        bot_e1 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] - thicknesswide1 - lambda_bot1
+        bot_e2 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] + lambda_bot2
+        bot_e3 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] + df_section['B5'][run_id] - lambda_bot2
+        bot_e4 = df_section['Ref_bot'][run_id] + df_section['B4'][run_id] + df_section['B5'][run_id] + thicknesswide2 + lambda_bot3
+        h_e1 = df_section['t1'][run_id] + lambda_h
+        h_e2 = df_section['t1'][run_id] + df_section['H'][run_id] - lambda_h
 
         # 主梁有效斷面計算
         # NOTE: 座標系統名稱與MIDAS一致(以前反卡氏xy)，以便對照全斷面結果
         # 對y軸
-        area_ye, z_e, y_, iyy_e, izz_ = Girdersection(lambda_top1 + 2*lambda_top2 + lambda_top3, 
+        area_ye, z_e, y_, iyy_e, izz_ = Girdersection(lambda_top1 + thicknesswide1 + lambda_top2 + lambda_top2 + thicknesswide2 + lambda_top3, 
                                                         df_section['t1'][run_id], 
-                                                        lambda_bot1 + 2*lambda_bot2 + lambda_bot3,
+                                                        lambda_bot1 + thicknesswide1 + lambda_bot2 + lambda_bot2 + thicknesswide2 + lambda_bot3,
                                                         df_section['t2'][run_id], 
                                                         df_section['H'][run_id], 
                                                         thicknesswide1, 
@@ -715,7 +715,7 @@ def Effectivesection(inputfile):
                                                         df_section['t1'][run_id], 
                                                         df_section['B4'][run_id] +df_section['B5'][run_id] +df_section['B6'][run_id],
                                                         df_section['t2'][run_id], 
-                                                        lambda_h*2-df_section['t1'][run_id]/2-df_section['t2'][run_id]/2, 
+                                                        lambda_h*2, 
                                                         thicknesswide1, 
                                                         thicknesswide2, 
                                                         df_section['Ref_top'][run_id], 
