@@ -793,9 +793,136 @@ def Effectivesection(inputfile):
     print("> 計算結果輸出至 {}".format(inputfilename+"_EffectiveSec.xlsx"))
 
 
+def Allowablestress(inputfile):
+    """計算鋼床鈑容許應力
+
+    Args:
+        inputfile (str): 輸入參數的excel
+    """
+    print("$ 執行容許應力計算。")
+    # %% 讀檔
+    (outputpath, filename_temp) = os.path.split(inputfile)
+    inputfilename = filename_temp.split(".")[0]
+    df_section = pd.read_excel(inputfile, sheet_name='鋼床鈑', skiprows=[1])
+
+    section_file = os.path.join(outputpath, inputfilename+"_Result.xlsx")
+    try:
+        df_sectionproperty = pd.read_excel(section_file, sheet_name='Section_SAP')
+    except:
+        print("> [Warning]: 請先執行斷面計算生成 [輸入檔名稱]_Result.xlsx")
+        sys.exit()
+
+    dict_allowablestress = {'Name':[],
+                            'FbxB':[],
+                            'FbxT':[],
+                            'Fv':[],
+                            'Fa':[],
+                            'Fby':[],
+                            'Fex':[],
+                            'Fey':[],
+                            'KyLy/ry':[],
+                            'KxLx/rx':[],
+                            }
+    for run_id in range(len(df_section)):
+        '''Fa'''
+        Es = df_section['E'][run_id]
+        Fy = df_section['Fy'][run_id]
+        Kx = df_section['KxLx'][run_id]/(df_sectionproperty['R33'][run_id]*1000)
+        Ky = df_section['KyLy'][run_id]/(df_sectionproperty['R22'][run_id]*1000)
+        FS = 2.12
+
+        Cc = math.sqrt(2*math.pow(math.pi,2)*Es/Fy)
+        k = Kx if Kx >= Ky else Ky
+
+        if k <= Cc:
+            Fa = Fy/FS*(1-(math.pow(k,2)*Fy/(4*math.pow(math.pi,2)*Es)))
+        else:
+            Fa = math.pow(math.pi,2)*Es/(FS*math.pow(k,2))
+
+        '''Fb'''
+        def Fb(tf, B, SP, Fy, Nrib, w):
+            k = min((math.pow(1+math.pow(SP/B,2),2) + 87.3) / (math.pow(Nrib+1,2)*math.pow(SP/B,2)*(1+0.1*(Nrib+1))) , 4)
+            wt = w/tf
+
+            if wt <= 813.96*math.sqrt(k/Fy):
+                Fb = 0.55*Fy
+            elif wt <= min(1763*math.sqrt(k/Fy), 60):
+                Fb = 0.55*Fy - 0.224*Fy*(1-math.sin(0.5*math.pi*(1763*math.sqrt(k)-wt*math.sqrt(Fy))/(949*math.sqrt(k))))
+            elif wt > 1763*math.sqrt(k/Fy) and wt <= 60:
+                Fb = 1.01408*k/math.pow(wt,2)*1E6
+            else:
+                print('*[Warning]: w/t > 60')
+                Fb = 'N/A'
+            
+            return Fb
+        
+        # NOTE:應該間距越大強度越低，這裡採輸入間距中最大值
+        rib_spacing = re.split(r'\s*,\s*', df_section['Top-Flange (Center-spacing)'][run_id])
+        FbxT = Fb(df_section['t1'][run_id], df_section['B2'][run_id], df_section['SP'][run_id], df_section['Fy'][run_id], len(rib_spacing), float(max(rib_spacing)))
+
+        rib_spacing = re.split(r'\s*,\s*', df_section['Bottom-Flange (Center-spacing)'][run_id])
+        FbxB = Fb(df_section['t2'][run_id], df_section['B5'][run_id], df_section['SP'][run_id], df_section['Fy'][run_id], len(rib_spacing), float(max(rib_spacing)))
+
+        '''Fv'''
+        tw = min(df_section['tw1'][run_id], df_section['tw2'][run_id])
+        H = df_section['H'][run_id]
+        D0 = df_section['D0'][run_id]
+        Fy = df_section['Fy'][run_id]
+
+        # SDB求C方法
+        C = min(1.55*1E7*(1+math.pow(H/D0,2))/(Fy*math.pow(H/tw,2)), 1)
+        # 規範標準解法
+        #
+        # k = 5 + 5/math.pow(D0/H,2)
+        # if H/tw < 1590*math.sqrt(k/Fy):
+        #     C = 1
+        # elif H/tw <= 1990*math.sqrt(k/Fy):
+        #     C = 1590*math.sqrt(k/Fy)/(H/tw)
+        # else:
+        #     C = 3.17*1E6*k/(math.pow(H/tw,2)*Fy)
+        #
+        Fv = (Fy/3) * (C + 0.87*(1-C)/math.sqrt(1+math.pow(D0/H,2)))
+
+        '''Fby'''
+        Fby = 0.55*df_section['Fy'][run_id]
+
+        '''Fe'''
+        Es = df_section['E'][run_id]
+        Fy = df_section['Fy'][run_id]
+        Kx = df_section['KxLx'][run_id]/(df_sectionproperty['R33'][run_id]*1000)
+        Ky = df_section['KyLy'][run_id]/(df_sectionproperty['R22'][run_id]*1000)
+        FS = 2.12
+
+        Fex = math.pow(math.pi,2)*Es/(FS*math.pow(Kx,2))
+        Fey = math.pow(math.pi,2)*Es/(FS*math.pow(Ky,2))
+
+
+        '''彙整結果'''
+        dict_allowablestress['Name'].append(df_section['Name'][run_id])
+        dict_allowablestress['FbxB'].append(FbxB)
+        dict_allowablestress['FbxT'].append(FbxT)
+        dict_allowablestress['Fv'].append(Fv)
+        dict_allowablestress['Fa'].append(Fa)
+        dict_allowablestress['Fby'].append(Fby)
+        dict_allowablestress['Fex'].append(Fex)
+        dict_allowablestress['Fey'].append(Fey)
+        dict_allowablestress['KyLy/ry'].append(Ky)
+        dict_allowablestress['KxLx/rx'].append(Kx)
+
+
+    df_allowablestress = pd.DataFrame.from_dict(dict_allowablestress)
+
+    # %% 結果輸出
+    output_file = os.path.join(outputpath, inputfilename+"_AllowStress.xlsx")
+    with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
+        df_allowablestress.to_excel(writer, sheet_name='AllowableStress_SAP', index=False)
+
+    print("> 計算結果輸出至 {}".format(inputfilename+"_AllowStress.xlsx"))
+
 # %% Main
-inputdata = r"D:\Users\63427\Desktop\Code\鋼床鈑\Steeldeckgirder\test\Section_G.xlsm"
+inputdata = r"D:\Users\63427\Desktop\Code\鋼床鈑\Steeldeckgirder\test\Section_TEST.xlsm"
 inputfile = inputdata
+
 Sectioncalculation(inputfile)
 Effectivesection(inputfile)
-print('break')
+Allowablestress(inputfile)
