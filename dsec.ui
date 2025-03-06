@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>734</width>
-    <height>407</height>
+    <width>809</width>
+    <height>476</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,11 +19,11 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>711</width>
-      <height>351</height>
+      <width>781</width>
+      <height>421</height>
      </rect>
     </property>
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="5,2">
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="6,2">
      <property name="spacing">
       <number>0</number>
      </property>
@@ -54,19 +54,25 @@
          </property>
          <property name="font">
           <font>
-           <family>Taipei Sans TC Beta Light</family>
-           <pointsize>16</pointsize>
+           <family>華康中圓體外字集</family>
+           <pointsize>17</pointsize>
            <weight>75</weight>
            <bold>true</bold>
           </font>
          </property>
          <property name="text">
-          <string>Deck Steel Girder Section Calculator</string>
+          <string>SteelDeck Girder Section Calculator</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QGroupBox" name="groupBox">
+         <property name="font">
+          <font>
+           <family>華康中圓體</family>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
          <property name="title">
           <string>執行區</string>
          </property>
@@ -75,7 +81,7 @@
            <rect>
             <x>10</x>
             <y>40</y>
-            <width>431</width>
+            <width>411</width>
             <height>21</height>
            </rect>
           </property>
@@ -86,7 +92,7 @@
            </font>
           </property>
           <property name="text">
-           <string>./example/Section.xlsx</string>
+           <string>./example/Section_TEST_branch.xlsm</string>
           </property>
          </widget>
          <widget class="QLabel" name="label">
@@ -94,9 +100,14 @@
            <rect>
             <x>10</x>
             <y>20</y>
-            <width>61</width>
+            <width>71</width>
             <height>16</height>
            </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+           </font>
           </property>
           <property name="text">
            <string>輸入檔路徑</string>
@@ -105,10 +116,10 @@
          <widget class="QPushButton" name="pushButton">
           <property name="geometry">
            <rect>
-            <x>450</x>
-            <y>30</y>
-            <width>41</width>
-            <height>41</height>
+            <x>427</x>
+            <y>34</y>
+            <width>31</width>
+            <height>31</height>
            </rect>
           </property>
           <property name="text">
@@ -118,63 +129,100 @@
          <widget class="QLabel" name="label_3">
           <property name="geometry">
            <rect>
-            <x>10</x>
-            <y>90</y>
+            <x>14</x>
+            <y>325</y>
             <width>81</width>
             <height>16</height>
            </rect>
           </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
           <property name="text">
-           <string>生成MCT指令</string>
+           <string>Midas幫你算</string>
           </property>
          </widget>
          <widget class="QPushButton" name="pushButton_2">
           <property name="geometry">
            <rect>
             <x>10</x>
-            <y>110</y>
-            <width>121</width>
-            <height>111</height>
+            <y>230</y>
+            <width>91</width>
+            <height>91</height>
            </rect>
           </property>
           <property name="text">
-           <string>生成MCT</string>
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>media/Midas_Civil.png</normaloff>media/Midas_Civil.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>35</width>
+            <height>35</height>
+           </size>
           </property>
          </widget>
          <widget class="QLabel" name="label_4">
           <property name="geometry">
            <rect>
-            <x>160</x>
-            <y>90</y>
-            <width>81</width>
+            <x>14</x>
+            <y>205</y>
+            <width>91</width>
             <height>16</height>
            </rect>
           </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
           <property name="text">
-           <string>計算斷面</string>
+           <string>Python幫你算</string>
           </property>
          </widget>
          <widget class="QPushButton" name="pushButton_3">
           <property name="geometry">
            <rect>
-            <x>160</x>
+            <x>10</x>
             <y>110</y>
-            <width>121</width>
-            <height>111</height>
+            <width>91</width>
+            <height>91</height>
            </rect>
           </property>
           <property name="text">
-           <string>計算斷面</string>
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>media/Python-logo-notext.svg.png</normaloff>media/Python-logo-notext.svg.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>35</width>
+            <height>35</height>
+           </size>
           </property>
          </widget>
          <widget class="QLabel" name="label_6">
           <property name="geometry">
            <rect>
-            <x>310</x>
-            <y>90</y>
+            <x>480</x>
+            <y>10</y>
             <width>91</width>
             <height>16</height>
            </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+           </font>
           </property>
           <property name="text">
            <string>開啟輸出資料夾</string>
@@ -183,14 +231,316 @@
          <widget class="QPushButton" name="pushButton_4">
           <property name="geometry">
            <rect>
-            <x>310</x>
-            <y>110</y>
-            <width>121</width>
-            <height>111</height>
+            <x>480</x>
+            <y>30</y>
+            <width>41</width>
+            <height>41</height>
            </rect>
           </property>
           <property name="text">
-           <string>開啟資料夾</string>
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>media/folder2.png</normaloff>media/folder2.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>30</width>
+            <height>30</height>
+           </size>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_7">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>80</y>
+            <width>91</width>
+            <height>24</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>12</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>全斷面計算</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_8">
+          <property name="geometry">
+           <rect>
+            <x>130</x>
+            <y>80</y>
+            <width>91</width>
+            <height>24</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>12</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>等價支間長</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="pushButton_5">
+          <property name="geometry">
+           <rect>
+            <x>130</x>
+            <y>110</y>
+            <width>91</width>
+            <height>91</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>media/building.png</normaloff>media/building.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>35</width>
+            <height>35</height>
+           </size>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_10">
+          <property name="geometry">
+           <rect>
+            <x>250</x>
+            <y>80</y>
+            <width>91</width>
+            <height>24</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>12</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>有效斷面</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="pushButton_6">
+          <property name="geometry">
+           <rect>
+            <x>250</x>
+            <y>110</y>
+            <width>91</width>
+            <height>91</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>media/steel.png</normaloff>media/steel.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>35</width>
+            <height>35</height>
+           </size>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_12">
+          <property name="geometry">
+           <rect>
+            <x>370</x>
+            <y>80</y>
+            <width>91</width>
+            <height>24</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>12</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>容許應力</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="pushButton_7">
+          <property name="geometry">
+           <rect>
+            <x>370</x>
+            <y>110</y>
+            <width>91</width>
+            <height>91</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>media/f.png</normaloff>media/f.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>35</width>
+            <height>35</height>
+           </size>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_14">
+          <property name="geometry">
+           <rect>
+            <x>130</x>
+            <y>200</y>
+            <width>91</width>
+            <height>24</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>12</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>三合一</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="pushButton_8">
+          <property name="geometry">
+           <rect>
+            <x>130</x>
+            <y>230</y>
+            <width>91</width>
+            <height>91</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>media/click.png</normaloff>media/click.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>35</width>
+            <height>35</height>
+           </size>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_15">
+          <property name="geometry">
+           <rect>
+            <x>230</x>
+            <y>230</y>
+            <width>91</width>
+            <height>16</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>全斷面計算</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_16">
+          <property name="geometry">
+           <rect>
+            <x>230</x>
+            <y>250</y>
+            <width>91</width>
+            <height>16</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>↓</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_17">
+          <property name="geometry">
+           <rect>
+            <x>230</x>
+            <y>270</y>
+            <width>91</width>
+            <height>16</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>有效斷面</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_18">
+          <property name="geometry">
+           <rect>
+            <x>230</x>
+            <y>290</y>
+            <width>91</width>
+            <height>16</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>↓</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_19">
+          <property name="geometry">
+           <rect>
+            <x>230</x>
+            <y>310</y>
+            <width>91</width>
+            <height>16</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>容許應力</string>
           </property>
          </widget>
         </widget>
@@ -213,6 +563,12 @@
        </property>
        <item>
         <widget class="QLabel" name="label_5">
+         <property name="font">
+          <font>
+           <family>華康中圓體</family>
+           <pointsize>11</pointsize>
+          </font>
+         </property>
          <property name="text">
           <string>執行狀態</string>
          </property>
@@ -231,7 +587,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>734</width>
+     <width>809</width>
      <height>21</height>
     </rect>
    </property>
