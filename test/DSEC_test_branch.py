@@ -702,7 +702,7 @@ def Equivalentwidth(inputfile):
                                                         controlpoint[span_id][0], 
                                                         controlpoint[span_id][1],
                                                         0.2*(span[span_id-1]+span[span_id]),
-                                                        0.8*span[span_id]
+                                                        0.6*span[span_id]
                                                         ]
                     df_effective_info.loc[index, 'KxLx'] = span[span_id]
                     df_effective_info.loc[index, 'KyLy'] = span[span_id]
@@ -711,11 +711,11 @@ def Equivalentwidth(inputfile):
                     df_effective_info.at[index, 'l'] = [data['Dist'], 
                                                         controlpoint[span_id][2], 
                                                         controlpoint[span_id][3],
+                                                        0.6*span[span_id],
                                                         0.2*(span[span_id]+span[span_id+1]),
-                                                        0.8*span[span_id+1]
                                                         ]  
                     df_effective_info.loc[index, 'KxLx'] = span[span_id]
-                    df_effective_info.loc[index, 'KyLy'] = span[span_id]         
+                    df_effective_info.loc[index, 'KyLy'] = span[span_id]       
                 else:
                     df_effective_info.loc[index, 'IE'] = 5
                     df_effective_info.loc[index, 'l'] = 0.6*span[span_id]
@@ -1127,7 +1127,7 @@ inputdata = r"D:\Users\63427\Desktop\Code\鋼床鈑\Steeldeckgirder\test\Section
 inputfile = inputdata
 
 
-Effectivesection(inputfile)
+Equivalentwidth(inputfile)
 
 
 

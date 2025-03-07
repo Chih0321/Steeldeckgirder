@@ -6,7 +6,7 @@
 
 [SecCal.zip](T:\63427\9.鋼床鈑斷面計算\SecCal.zip)解壓縮後，執行SecCal/SecCal.exe
 
-for programmer, clone the repositery and run DSEC.py or excute the file in test folder.
+for programmer, clone the repository and run DSEC.py or excute the file in test folder.
 
 ## 使用教學 (tutorial)
 
