@@ -5,6 +5,8 @@ import math
 import os
 import openpyxl
 import ast
+import ezdxf
+from tqdm import tqdm
 
 import sys
 
@@ -1122,14 +1124,233 @@ def Allowablestress(inputfile):
 
     print("> 計算結果輸出至 {}".format(inputfilename+"_AllowStress.xlsx"))
 
+
+def Plotsectiondxf(inputfile):
+    print("$ 執行斷面DXF繪製。")
+    # %% 讀檔
+    (outputpath, filename_temp) = os.path.split(inputfile)
+    inputfilename = filename_temp.split(".")[0]
+
+    df_section = pd.read_excel(inputfile, sheet_name='鋼床鈑', skiprows=[1])
+    df_ribs = pd.read_excel(inputfile, sheet_name='加勁鈑')
+    df_rib_property = pd.DataFrame.from_dict(df_ribs)
+    df_rib_property = df_rib_property.set_index('Name') 
+
+    drawing_spacing = 0
+    # create a new DXF R2010 document
+    doc = ezdxf.new()
+    # add new entities to the modelspace
+    msp = doc.modelspace()
+    if 'Section' not in doc.layers:
+        doc.layers.new(name='Section')
+    if 'Annotation' not in doc.layers:
+        doc.layers.new(name='Annotation')
+    text_style = "FontStyle"
+    if text_style not in doc.styles:
+        doc.styles.new(name=text_style, dxfattribs={"font" : "OpenSans-Regular.ttf"}) 
+    for run_id in tqdm(range(len(df_section))):
+        '''主要箱梁斷面'''
+        # 處理腹板厚
+        H = df_section['H'][run_id]
+        tw1 = df_section['tw1'][run_id]
+        tw2 = df_section['tw2'][run_id]
+        difference_y1 = df_section['Ref_top'][run_id] +df_section['B1'][run_id] -df_section['Ref_bot'][run_id] -df_section['B4'][run_id]
+        inclineangle1 = math.atan(difference_y1 /H)
+        thicknesswide1 = tw1/math.cos(inclineangle1)
+        difference_y2 = df_section['Ref_top'][run_id] +df_section['B1'][run_id] +df_section['B2'][run_id] -df_section['Ref_bot'][run_id] -df_section['B4'][run_id] -df_section['B5'][run_id]
+        inclineangle2 = math.atan(difference_y2 /H)
+        thicknesswide2 = tw2/math.cos(inclineangle2)
+
+        # built the control points of the top flange
+        pt1 = (drawing_spacing, 0)
+        pt2 = (drawing_spacing+df_section['B1'][run_id]+df_section['B2'][run_id]+df_section['B3'][run_id], 0)
+        pt3 = (drawing_spacing, -df_section['t1'][run_id])
+        pt4 = (drawing_spacing+df_section['B1'][run_id]+df_section['B2'][run_id]+df_section['B3'][run_id], -df_section['t1'][run_id])
+        # built the control points of the botttom flange
+        bot_cp = df_section['Ref_bot'][run_id] - df_section['Ref_top'][run_id]
+        pb1 = (drawing_spacing+bot_cp, -df_section['t1'][run_id]-H)
+        pb2 = (drawing_spacing+bot_cp+df_section['B4'][run_id]+df_section['B5'][run_id]+df_section['B6'][run_id], -df_section['t1'][run_id]-H)
+        pb3 = (drawing_spacing+bot_cp, -df_section['t1'][run_id]-H-df_section['t2'][run_id])
+        pb4 = (drawing_spacing+bot_cp+df_section['B4'][run_id]+df_section['B5'][run_id]+df_section['B6'][run_id], -df_section['t1'][run_id]-H-df_section['t2'][run_id])
+        # built the control points of the left web
+        pl1 = (drawing_spacing+df_section['B1'][run_id]-thicknesswide1,  -df_section['t1'][run_id])
+        pl2 = (drawing_spacing+df_section['B1'][run_id],  -df_section['t1'][run_id])
+        pl3 = (drawing_spacing+bot_cp+df_section['B4'][run_id]-thicknesswide1,  -df_section['t1'][run_id]-H)
+        pl4 = (drawing_spacing+bot_cp+df_section['B4'][run_id],  -df_section['t1'][run_id]-H)
+        # built the control points of the right web
+        pr1 = (drawing_spacing+df_section['B1'][run_id]+df_section['B2'][run_id]-thicknesswide2, -df_section['t1'][run_id])
+        pr2 = (drawing_spacing+df_section['B1'][run_id]+df_section['B2'][run_id],  -df_section['t1'][run_id])
+        pr3 = (drawing_spacing+bot_cp+df_section['B4'][run_id]+df_section['B5'][run_id]-thicknesswide2,  -df_section['t1'][run_id]-H)
+        pr4 = (drawing_spacing+bot_cp+df_section['B4'][run_id]+df_section['B5'][run_id],  -df_section['t1'][run_id]-H)
+
+        # draw section
+        msp.add_line(pt1, pt2, dxfattribs={"layer": "Section"})
+        msp.add_line(pt1, pt3, dxfattribs={"layer": "Section"})
+        msp.add_line(pt2, pt4, dxfattribs={"layer": "Section"})
+        msp.add_line(pt3, pt4, dxfattribs={"layer": "Section"})
+        msp.add_line(pb1, pb2, dxfattribs={"layer": "Section"})
+        msp.add_line(pb1, pb3, dxfattribs={"layer": "Section"})
+        msp.add_line(pb2, pb4, dxfattribs={"layer": "Section"})
+        msp.add_line(pb3, pb4, dxfattribs={"layer": "Section"})
+        msp.add_line(pl1, pl2, dxfattribs={"layer": "Section"})
+        msp.add_line(pl1, pl3, dxfattribs={"layer": "Section"})
+        msp.add_line(pl2, pl4, dxfattribs={"layer": "Section"})
+        msp.add_line(pl3, pl4, dxfattribs={"layer": "Section"})
+        msp.add_line(pr1, pr2, dxfattribs={"layer": "Section"})
+        msp.add_line(pr1, pr3, dxfattribs={"layer": "Section"})
+        msp.add_line(pr2, pr4, dxfattribs={"layer": "Section"})
+        msp.add_line(pr3, pr4, dxfattribs={"layer": "Section"})
+
+        '''加入加勁鈑'''
+        dict_position_top = {'Top-Flange (Left-type)':['Top-Flange (Left-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id], [df_section['Ref_top'][run_id], df_section['Ref_top'][run_id]]],
+                            'Top-Flange (Center-type)':['Top-Flange (Center-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id]+df_section['B1'][run_id], [df_section['Ref_top'][run_id], df_section['Ref_top'][run_id]]],
+                            'Top-Flange (Right-type)':['Top-Flange (Right-spacing)', df_section['t1'][run_id], df_section['Ref_top'][run_id]+df_section['B1'][run_id]+df_section['B2'][run_id], [df_section['Ref_top'][run_id], df_section['Ref_top'][run_id]]],
+                            }
+        dict_position_bot = {'Bottom-Flange (Left-type)':['Bottom-Flange (Left-spacing)', df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id], [df_section['Ref_bot'][run_id], df_section['Ref_bot'][run_id]]],
+                            'Bottom-Flange (Center-type)':['Bottom-Flange (Center-spacing)',  df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id]+df_section['B4'][run_id], [df_section['Ref_bot'][run_id], df_section['Ref_bot'][run_id]]],
+                            'Bottom-Flange (Right-type)':['Bottom-Flange (Right-spacing)',  df_section['t1'][run_id]+df_section['H'][run_id], df_section['Ref_bot'][run_id]+df_section['B4'][run_id]+df_section['B5'][run_id], [df_section['Ref_bot'][run_id], df_section['Ref_bot'][run_id]]],
+                            }
+        # deal with top flange
+        for key, item in dict_position_top.items():
+            if not pd.isna(df_section[key][run_id]):
+                ### 單獨rib斷面性質提取
+                rib_type = df_section[key][run_id]
+                ### 提取ribs間距
+                rib_spacing = re.split(r'\s*,\s*', df_section[item[0]][run_id])
+                rib_num = len(rib_spacing)
+
+                ### 參考位置定位與初始化
+                rib_z_level = item[1]
+                rib_y_level = item[2]
+                rib_dist_y = 0
+                rib_area_top_temp = 0
+                ### 加勁版繪製
+                for rr in range(len(rib_spacing)):
+                    #### rib座標位置定出
+                    set_z = -rib_z_level
+                    rib_dist_y = rib_dist_y + float(rib_spacing[rr])
+                    set_y = rib_y_level + rib_dist_y
+
+                    if df_rib_property['Type'][rib_type] == 'Flat':
+                        rH = df_rib_property['H/H/H'][rib_type]
+                        rB = df_rib_property['B/B/B1'][rib_type]
+
+                        rp1 = (drawing_spacing+set_y-rB/2, set_z)
+                        rp2 = (drawing_spacing+set_y+rB/2, set_z)
+                        rp3 = (drawing_spacing+set_y-rB/2, set_z-rH)
+                        rp4 = (drawing_spacing+set_y+rB/2, set_z-rH)
+                        msp.add_line(rp1, rp2, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp1, rp3, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp2, rp4, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp3, rp4, dxfattribs={"layer": "Section"})
+
+                    elif df_rib_property['Type'][rib_type] == 'Tee':
+                        bt = df_rib_property['B/B/B1'][rib_type] 
+                        tft = df_rib_property['/tf/t'][rib_type] 
+                        ht = df_rib_property['H/H/H'][rib_type] 
+                        twt = df_rib_property['/tw/B2'][rib_type] 
+
+                        rp1 = (drawing_spacing+set_y-twt/2, set_z)
+                        rp2 = (drawing_spacing+set_y+twt/2, set_z)
+                        rp3 = (drawing_spacing+set_y-twt/2, set_z-ht)
+                        rp4 = (drawing_spacing+set_y+twt/2, set_z-ht)
+                        msp.add_line(rp1, rp2, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp1, rp3, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp2, rp4, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp3, rp4, dxfattribs={"layer": "Section"})
+
+                        rp1 = (drawing_spacing+set_y-bt/2, set_z-ht)
+                        rp2 = (drawing_spacing+set_y+bt/2, set_z-ht)
+                        rp3 = (drawing_spacing+set_y-bt/2, set_z-ht-tft)
+                        rp4 = (drawing_spacing+set_y+bt/2, set_z-ht-tft)
+                        msp.add_line(rp1, rp2, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp1, rp3, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp2, rp4, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp3, rp4, dxfattribs={"layer": "Section"})
+
+        # deal with bottom flange
+        for key, item in dict_position_bot.items():
+            if not pd.isna(df_section[key][run_id]):
+                ### 單獨rib斷面性質提取
+                rib_type = df_section[key][run_id]
+                ### 提取ribs間距
+                rib_spacing = re.split(r'\s*,\s*', df_section[item[0]][run_id])
+                rib_num = len(rib_spacing)
+
+                ### 參考位置定位與初始化
+                rib_z_level = item[1]
+                rib_y_level = item[2]
+                rib_dist_y = 0
+                rib_area_top_temp = 0
+                ### 加勁版繪製
+                for rr in range(len(rib_spacing)):
+                    #### rib座標位置定出
+                    set_z = -rib_z_level
+                    rib_dist_y = rib_dist_y + float(rib_spacing[rr])
+                    set_y = rib_y_level + rib_dist_y
+
+                    if df_rib_property['Type'][rib_type] == 'Flat':
+                        rH = df_rib_property['H/H/H'][rib_type]
+                        rB = df_rib_property['B/B/B1'][rib_type]
+
+                        rp1 = (drawing_spacing+set_y-rB/2, set_z)
+                        rp2 = (drawing_spacing+set_y+rB/2, set_z)
+                        rp3 = (drawing_spacing+set_y-rB/2, set_z+rH)
+                        rp4 = (drawing_spacing+set_y+rB/2, set_z+rH)
+                        msp.add_line(rp1, rp2, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp1, rp3, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp2, rp4, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp3, rp4, dxfattribs={"layer": "Section"})
+
+                    elif df_rib_property['Type'][rib_type] == 'Tee':
+                        bt = df_rib_property['B/B/B1'][rib_type] 
+                        tft = df_rib_property['/tf/t'][rib_type] 
+                        ht = df_rib_property['H/H/H'][rib_type] 
+                        twt = df_rib_property['/tw/B2'][rib_type] 
+
+                        rp1 = (drawing_spacing+set_y-twt/2, set_z)
+                        rp2 = (drawing_spacing+set_y+twt/2, set_z)
+                        rp3 = (drawing_spacing+set_y-twt/2, set_z+ht)
+                        rp4 = (drawing_spacing+set_y+twt/2, set_z+ht)
+                        msp.add_line(rp1, rp2, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp1, rp3, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp2, rp4, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp3, rp4, dxfattribs={"layer": "Section"})
+
+                        rp1 = (drawing_spacing+set_y-bt/2, set_z+ht)
+                        rp2 = (drawing_spacing+set_y+bt/2, set_z+ht)
+                        rp3 = (drawing_spacing+set_y-bt/2, set_z+ht+tft)
+                        rp4 = (drawing_spacing+set_y+bt/2, set_z+ht+tft)
+                        msp.add_line(rp1, rp2, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp1, rp3, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp2, rp4, dxfattribs={"layer": "Section"})
+                        msp.add_line(rp3, rp4, dxfattribs={"layer": "Section"})
+
+        # 插入文字
+        textp1 = drawing_spacing + (df_section['B1'][run_id]+df_section['B2'][run_id]+df_section['B3'][run_id])/2
+        textp2 = -df_section['t1'][run_id]-H-df_section['t2'][run_id] -1000
+        msp.add_text(
+            df_section['Name'][run_id],
+            dxfattribs={
+                "style": text_style,  # 設定字型樣式
+                "height": 300,        # 設定字高
+            }
+        ).set_pos((textp1, textp2), align="MIDDLE")  # 設定位置
+
+        drawing_spacing = drawing_spacing + df_section['B1'][run_id] + df_section['B2'][run_id] + df_section['B3'][run_id] + 1000
+
+    print('> 儲存圖檔中')
+    output_dxf = os.path.join(outputpath, inputfilename+"_section.dxf")
+    doc.saveas(output_dxf)
+    print('> 完成dxf繪製。')
+
+
 # %% Main
 inputdata = r"D:\Users\63427\Desktop\Code\鋼床鈑\Steeldeckgirder\test\Section_TEST_branch.xlsm"
+inputdata = r"/Users/chih/Documents/Code/Steeldeckgirder/test/Section_TEST_branch.xlsm"
 inputfile = inputdata
 
-
-Equivalentwidth(inputfile)
-
-
+Plotsectiondxf(inputfile)
 
 
 print('break')
