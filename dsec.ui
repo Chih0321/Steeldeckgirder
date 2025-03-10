@@ -54,7 +54,7 @@
          </property>
          <property name="font">
           <font>
-           <family>華康中圓體外字集</family>
+           <family>DejaVu Sans Condensed</family>
            <pointsize>17</pointsize>
            <weight>75</weight>
            <bold>true</bold>
@@ -163,8 +163,8 @@
           </property>
           <property name="iconSize">
            <size>
-            <width>35</width>
-            <height>35</height>
+            <width>45</width>
+            <height>45</height>
            </size>
           </property>
          </widget>
@@ -205,8 +205,8 @@
           </property>
           <property name="iconSize">
            <size>
-            <width>35</width>
-            <height>35</height>
+            <width>45</width>
+            <height>45</height>
            </size>
           </property>
          </widget>
@@ -311,8 +311,8 @@
           </property>
           <property name="iconSize">
            <size>
-            <width>35</width>
-            <height>35</height>
+            <width>45</width>
+            <height>45</height>
            </size>
           </property>
          </widget>
@@ -355,8 +355,8 @@
           </property>
           <property name="iconSize">
            <size>
-            <width>35</width>
-            <height>35</height>
+            <width>45</width>
+            <height>45</height>
            </size>
           </property>
          </widget>
@@ -399,8 +399,8 @@
           </property>
           <property name="iconSize">
            <size>
-            <width>35</width>
-            <height>35</height>
+            <width>45</width>
+            <height>45</height>
            </size>
           </property>
          </widget>
@@ -443,8 +443,8 @@
           </property>
           <property name="iconSize">
            <size>
-            <width>35</width>
-            <height>35</height>
+            <width>40</width>
+            <height>40</height>
            </size>
           </property>
          </widget>
@@ -541,6 +541,50 @@
           </property>
           <property name="text">
            <string>容許應力</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="pushButton_9">
+          <property name="geometry">
+           <rect>
+            <x>370</x>
+            <y>230</y>
+            <width>91</width>
+            <height>91</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>media/dxf-file.png</normaloff>media/dxf-file.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>60</width>
+            <height>60</height>
+           </size>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_13">
+          <property name="geometry">
+           <rect>
+            <x>370</x>
+            <y>200</y>
+            <width>91</width>
+            <height>24</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <family>華康中圓體</family>
+            <pointsize>12</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>畫斷面DXF</string>
           </property>
          </widget>
         </widget>

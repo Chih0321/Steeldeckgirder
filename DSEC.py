@@ -5,7 +5,8 @@ import math
 import os
 import ast
 import ezdxf
-from tqdm import tqdm
+from ezdxf.enums import TextEntityAlignment
+
 
 import sys
 from PySide6 import QtCore
@@ -1156,7 +1157,7 @@ def Plotsectiondxf(inputfile):
     text_style = "FontStyle"
     if text_style not in doc.styles:
         doc.styles.new(name=text_style, dxfattribs={"font" : "OpenSans-Regular.ttf"}) 
-    for run_id in tqdm(range(len(df_section))):
+    for run_id in range(len(df_section)):
         '''主要箱梁斷面'''
         # 處理腹板厚
         H = df_section['H'][run_id]
@@ -1343,7 +1344,7 @@ def Plotsectiondxf(inputfile):
                 "style": text_style,  # 設定字型樣式
                 "height": 300,        # 設定字高
             }
-        ).set_pos((textp1, textp2), align="MIDDLE")  # 設定位置
+        ).set_placement((textp1, textp2), align=TextEntityAlignment.MIDDLE_CENTER)  # 設定位置
 
         drawing_spacing = drawing_spacing + df_section['B1'][run_id] + df_section['B2'][run_id] + df_section['B3'][run_id] + 1000
 
