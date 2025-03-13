@@ -563,6 +563,7 @@ def Sectioncalculation(inputfile):
     df_section_stlg_sap['R22'] = np.sqrt((df_section_stlg['Izz']/(1E12))/(df_section_stlg['Area']/1E6))
     df_section_stlg_sap['R33'] = np.sqrt((df_section_stlg['Iyy']/(1E12))/(df_section_stlg['Area']/1E6))
     df_section_stlg_sap['t3'] = (df_section_stlg['zna_top']/(1000))+(df_section_stlg['zna_bot']/1000)
+    # TODO: 可以調整成箱室寬而已
     df_section_stlg_sap['t2'] = (df_section_stlg['yna_right']/(1000))+(df_section_stlg['yna_left']/1000)
     df_section_stlg_sap['Area'] = df_section_stlg['Area']/1E6
     df_section_stlg_sap['TorsConst'] = df_section_stlg['Ixx']/1E12
@@ -1133,6 +1134,30 @@ def Allowablestress(inputfile):
     print("> 計算結果輸出至 {}".format(inputfilename+"_AllowStress.xlsx"))
 
 
+def Summaryresult(inputfile):
+    print('$ 彙整結果')
+    # %% 讀檔
+    (outputpath, filename_temp) = os.path.split(inputfile)
+    inputfilename = filename_temp.split(".")[0]
+    name_sectionresult = os.path.join(outputpath, inputfilename+"_Result.xlsx")
+    name_effectiveresult = os.path.join(outputpath, inputfilename+"_EffectiveSec.xlsx")
+    name_allowableresult = os.path.join(outputpath, inputfilename+"_AllowStress.xlsx")
+
+    df_sectionresult = pd.read_excel(name_sectionresult, sheet_name='Section_SAP')
+    df_sectionresult = df_sectionresult.set_index('Name')  
+    df_effectiveresult = pd.read_excel(name_effectiveresult, sheet_name='Section_SDB')
+    df_effectiveresult = df_effectiveresult.set_index('Name')  
+    df_allowableresult = pd.read_excel(name_allowableresult, sheet_name='AllowableStress_SAP')
+    df_allowableresult = df_allowableresult.set_index('Name')  
+    df_allresult = pd.concat([df_allowableresult, df_effectiveresult, df_sectionresult], axis=1).reset_index()
+    df_allresult = df_allresult.set_index('Name') 
+
+    # %% 結果輸出
+    output_file = os.path.join(outputpath, inputfilename+"_4SDB.xlsx")
+    with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
+        df_allresult.to_excel(writer, sheet_name='SDB')
+
+
 
 def Plotsectiondxf(inputfile):
     print("$ 執行斷面DXF繪製。")
@@ -1522,6 +1547,7 @@ class workerallinone(QObject):
         Sectioncalculation(inputdata)
         Effectivesection(inputdata)
         Allowablestress(inputdata)
+        Summaryresult(inputdata)
         
         """傳出狀態"""
         self.finished.emit()

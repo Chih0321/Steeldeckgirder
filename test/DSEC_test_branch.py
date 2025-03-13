@@ -6,7 +6,7 @@ import os
 import openpyxl
 import ast
 import ezdxf
-from tqdm import tqdm
+from ezdxf.enums import TextEntityAlignment
 
 import sys
 
@@ -1125,6 +1125,32 @@ def Allowablestress(inputfile):
     print("> 計算結果輸出至 {}".format(inputfilename+"_AllowStress.xlsx"))
 
 
+def Summaryresult(inputfile):
+    print('$ 彙整結果')
+    # %% 讀檔
+    (outputpath, filename_temp) = os.path.split(inputfile)
+    inputfilename = filename_temp.split(".")[0]
+    name_sectionresult = os.path.join(outputpath, inputfilename+"_Result.xlsx")
+    name_effectiveresult = os.path.join(outputpath, inputfilename+"_EffectiveSec.xlsx")
+    name_allowableresult = os.path.join(outputpath, inputfilename+"_AllowStress.xlsx")
+
+    df_sectionresult = pd.read_excel(name_sectionresult, sheet_name='Section_SAP')
+    df_sectionresult = df_sectionresult.set_index('Name')  
+    df_effectiveresult = pd.read_excel(name_effectiveresult, sheet_name='Section_SDB')
+    df_effectiveresult = df_effectiveresult.set_index('Name')  
+    df_allowableresult = pd.read_excel(name_allowableresult, sheet_name='AllowableStress_SAP')
+    df_allowableresult = df_allowableresult.set_index('Name')  
+    df_allresult = pd.concat([df_allowableresult, df_effectiveresult, df_sectionresult], axis=1).reset_index()
+    df_allresult = df_allresult.set_index('Name') 
+
+    # %% 結果輸出
+    output_file = os.path.join(outputpath, inputfilename+"_4SDB.xlsx")
+    with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
+        df_allresult.to_excel(writer, sheet_name='SDB')
+
+    print("> 結果輸出至 {}".format(inputfilename+"_4SDB.xlsx"))
+
+
 def Plotsectiondxf(inputfile):
     print("$ 執行斷面DXF繪製。")
     # %% 讀檔
@@ -1148,7 +1174,7 @@ def Plotsectiondxf(inputfile):
     text_style = "FontStyle"
     if text_style not in doc.styles:
         doc.styles.new(name=text_style, dxfattribs={"font" : "OpenSans-Regular.ttf"}) 
-    for run_id in tqdm(range(len(df_section))):
+    for run_id in range(len(df_section)):
         '''主要箱梁斷面'''
         # 處理腹板厚
         H = df_section['H'][run_id]
@@ -1335,7 +1361,7 @@ def Plotsectiondxf(inputfile):
                 "style": text_style,  # 設定字型樣式
                 "height": 300,        # 設定字高
             }
-        ).set_pos((textp1, textp2), align="MIDDLE")  # 設定位置
+        ).set_placement((textp1, textp2), align=TextEntityAlignment.MIDDLE_CENTER) # 設定位置
 
         drawing_spacing = drawing_spacing + df_section['B1'][run_id] + df_section['B2'][run_id] + df_section['B3'][run_id] + 1000
 
@@ -1347,10 +1373,10 @@ def Plotsectiondxf(inputfile):
 
 # %% Main
 inputdata = r"D:\Users\63427\Desktop\Code\鋼床鈑\Steeldeckgirder\test\Section_TEST_branch.xlsm"
-inputdata = r"/Users/chih/Documents/Code/Steeldeckgirder/test/Section_TEST_branch.xlsm"
+# inputdata = r"/Users/chih/Documents/Code/Steeldeckgirder/test/Section_TEST_branch.xlsm"
 inputfile = inputdata
 
-Plotsectiondxf(inputfile)
+
 
 
 print('break')
